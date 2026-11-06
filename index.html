@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101522">
+  <title>AMR AI — مساعدك الذكي</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand"><div class="brand-mark">✦</div><div><b>AMR AI</b><small>مساعدك الذكي</small></div></div>
+      <button class="new-chat" id="newChat">＋ محادثة جديدة</button>
+      <div class="side-label">المحادثات الأخيرة</div>
+      <div id="history" class="history"></div>
+      <div class="sidebar-bottom">
+        <div class="profile"><div class="avatar">A</div><div><b>AMR AI</b><small>الإصدار التجريبي</small></div></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="mobile-menu" id="menuBtn" aria-label="فتح القائمة">☰</button>
+        <div class="model-name"><span class="status-dot"></span> AMR AI <span class="model-tag">Gemini</span></div>
+        <button class="clear-btn" id="clearChat" title="مسح المحادثة">مسح المحادثة</button>
+      </header>
+
+      <section class="conversation" id="conversation">
+        <div class="welcome" id="welcome">
+          <div class="welcome-icon">✦</div>
+          <h1>أهلاً بك في <span>AMR AI</span></h1>
+          <p>اسألني أي سؤال، وسأحاول مساعدتك بأفضل شكل ممكن.</p>
+          <div class="suggestions">
+            <button class="suggestion" data-prompt="اشرح لي الذكاء الاصطناعي بطريقة بسيطة">💡 <span>اشرح لي موضوعًا</span></button>
+            <button class="suggestion" data-prompt="ساعدني في كتابة كود JavaScript بسيط">⌨️ <span>اكتب لي كودًا</span></button>
+            <button class="suggestion" data-prompt="اعمل لي خطة مذاكرة منظمة لمدة أسبوع">📚 <span>ساعدني في المذاكرة</span></button>
+            <button class="suggestion" data-prompt="اقترح أفكارًا لمشروع موقع إلكتروني مميز">🚀 <span>اقترح أفكارًا</span></button>
+          </div>
+        </div>
+        <div id="messages" class="messages" aria-live="polite"></div>
+      </section>
+
+      <footer class="composer-wrap">
+        <form id="chatForm" class="composer">
+          <textarea id="prompt" rows="1" placeholder="اكتب رسالتك إلى AMR AI..." aria-label="رسالتك"></textarea>
+          <button id="sendBtn" class="send-btn" type="submit" aria-label="إرسال">➤</button>
+        </form>
+        <div class="disclaimer">قد يخطئ AMR AI أحيانًا؛ راجع المعلومات المهمة. لا تشارك بياناتك الشخصية أو كلمات المرور.</div>
+      </footer>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
