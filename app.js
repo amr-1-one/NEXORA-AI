@@ -21,7 +21,10 @@ let conversations = JSON.parse(
 let activeChatId = null;
 let isTyping = false;
 
-// إنشاء معرف للمحادثات القديمة
+// ==========================================
+// معرفات المحادثات القديمة
+// ==========================================
+
 conversations = conversations.map(chat => ({
   ...chat,
   id: chat.id || crypto.randomUUID()
@@ -58,6 +61,8 @@ function renderHistory() {
     }
 
     btn.addEventListener("click", () => {
+      if (isTyping) return;
+
       activeChatId = chat.id;
       messages = [...(chat.messages || [])];
 
@@ -71,7 +76,7 @@ function renderHistory() {
 }
 
 // ==========================================
-// حفظ المحادثة الحالية بدون تكرار
+// حفظ المحادثة الحالية
 // ==========================================
 
 function persistCurrent() {
@@ -146,6 +151,10 @@ function renderMessages() {
   scrollToBottom();
 }
 
+// ==========================================
+// النزول لآخر المحادثة
+// ==========================================
+
 function scrollToBottom() {
   const conversation = document.getElementById("conversation");
 
@@ -153,7 +162,49 @@ function scrollToBottom() {
 }
 
 // ==========================================
-// تأثير الكتابة التدريجية
+// تقسيم الإجابة إلى أسطر
+// ==========================================
+
+function splitResponseIntoLines(text) {
+  const originalLines = text.split("\n");
+  const result = [];
+  const maxCharacters = 75;
+
+  originalLines.forEach(originalLine => {
+    if (!originalLine.trim()) {
+      result.push("");
+      return;
+    }
+
+    const words = originalLine.split(/\s+/);
+    let currentLine = "";
+
+    words.forEach(word => {
+      const testLine = currentLine
+        ? currentLine + " " + word
+        : word;
+
+      if (
+        testLine.length > maxCharacters &&
+        currentLine
+      ) {
+        result.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    });
+
+    if (currentLine) {
+      result.push(currentLine);
+    }
+  });
+
+  return result;
+}
+
+// ==========================================
+// عرض رد NEXORA AI سطرًا بعد سطر
 // ==========================================
 
 function typeAssistantMessage(text) {
@@ -173,19 +224,12 @@ function typeAssistantMessage(text) {
 
     welcome.style.display = "none";
 
-    let position = 0;
-    const chunkSize = 4;
+    const lines = splitResponseIntoLines(text);
 
-    function typeNext() {
-      position = Math.min(position + chunkSize, text.length);
+    let index = 0;
 
-      bubble.textContent = text.slice(0, position);
-
-      scrollToBottom();
-
-      if (position < text.length) {
-        setTimeout(typeNext, 12);
-      } else {
+    function showNextLine() {
+      if (index >= lines.length) {
         messages.push({
           role: "assistant",
           text
@@ -193,10 +237,23 @@ function typeAssistantMessage(text) {
 
         persistCurrent();
         resolve();
+        return;
       }
+
+      if (index > 0) {
+        bubble.textContent += "\n";
+      }
+
+      bubble.textContent += lines[index];
+
+      index++;
+
+      scrollToBottom();
+
+      setTimeout(showNextLine, 160);
     }
 
-    typeNext();
+    showNextLine();
   });
 }
 
@@ -209,10 +266,7 @@ async function sendMessage(text) {
 
   if (!clean || sendBtn.disabled || isTyping) return;
 
-  if (
-    !API_URL.startsWith("https://") ||
-    API_URL.includes("YOUR-WORKER-NAME")
-  ) {
+  if (!API_URL.startsWith("https://")) {
     alert("تأكد من رابط Cloudflare Worker.");
     return;
   }
@@ -344,7 +398,7 @@ document.getElementById("newChat").addEventListener("click", () => {
 });
 
 // ==========================================
-// مسح المحادثة الحالية
+// مسح المحادثة الحالية من الشاشة
 // ==========================================
 
 document.getElementById("clearChat").addEventListener("click", () => {
