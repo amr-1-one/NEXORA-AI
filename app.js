@@ -1,5 +1,5 @@
 // ضع رابط Cloudflare Worker بعد نشره في هذا المتغير:
-const API_URL = "https://amr-1-one.github.io/NEXORA-AI/";
+const API_URL = "https://nexora-ai.egyptianshops1.workers.dev";
 
 const form = document.getElementById("chatForm");
 const input = document.getElementById("prompt");
