@@ -469,17 +469,18 @@ logoutBtn.addEventListener("click", async () => {
   if (error) alert("تعذّر تسجيل الخروج: " + error.message);
 });
 
-supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+supabaseClient.auth.onAuthStateChange((_event, session) => {
   if (_event === "PASSWORD_RECOVERY") {
-    const newPassword = prompt("اكتب كلمة المرور الجديدة (6 أحرف على الأقل):");
-    if (newPassword && newPassword.length >= 6) {
-      const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
-      alert(error ? "تعذّر تحديث كلمة المرور: " + error.message : "تم تحديث كلمة المرور بنجاح.");
-    } else if (newPassword !== null) {
-      alert("كلمة المرور يجب أن تكون 6 أحرف على الأقل.");
-    }
-  }
-  const nextUser = session?.user || null;
+    setTimeout(async () => {
+      const newPassword = prompt("اكتب كلمة المرور الجديدة (6 أحرف على الأقل):");
+      if (newPassword && newPassword.length >= 6) {
+        const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
+        alert(error ? "تعذّر تحديث كلمة المرور: " + error.message : "تم تحديث كلمة المرور بنجاح.");
+      } else if (newPassword !== null) {
+        alert("كلمة المرور يجب أن تكون 6 أحرف على الأقل.");
+      }
+    }, 0);
+  }  const nextUser = session?.user || null;
 
   if (currentUser?.id === nextUser?.id) return;
 
