@@ -383,6 +383,30 @@ document.getElementById("menuBtn").addEventListener("click", () => {
   document.querySelector(".sidebar").classList.toggle("open");
 });
 
+
+const resetPasswordBtn = document.getElementById("resetPasswordBtn");
+resetPasswordBtn.addEventListener("click", async () => {
+  const email = authEmail.value.trim();
+  if (!email) {
+    setAuthMessage("اكتب بريدك الإلكتروني أولًا ثم اضغط نسيت كلمة المرور.", true);
+    authEmail.focus();
+    return;
+  }
+  resetPasswordBtn.disabled = true;
+  setAuthMessage("جارٍ إرسال رابط استعادة كلمة المرور...");
+  try {
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+      redirectTo: "https://amr-1-one.github.io/NEXORA-AI/"
+    });
+    if (error) throw error;
+    setAuthMessage("لو البريد مسجل عندنا، هيوصلك رابط لاستعادة كلمة المرور. افحص صندوق الوارد والرسائل غير المرغوب فيها.");
+  } catch (error) {
+    setAuthMessage(error.message || "تعذّر إرسال رابط الاستعادة.", true);
+  } finally {
+    resetPasswordBtn.disabled = false;
+  }
+});
+
 authOpen.addEventListener("click", () => openAuthModal("login"));
 document.getElementById("authClose").addEventListener("click", closeAuthModal);
 
@@ -445,7 +469,16 @@ logoutBtn.addEventListener("click", async () => {
   if (error) alert("تعذّر تسجيل الخروج: " + error.message);
 });
 
-supabaseClient.auth.onAuthStateChange((_event, session) => {
+supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+  if (_event === "PASSWORD_RECOVERY") {
+    const newPassword = prompt("اكتب كلمة المرور الجديدة (6 أحرف على الأقل):");
+    if (newPassword && newPassword.length >= 6) {
+      const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
+      alert(error ? "تعذّر تحديث كلمة المرور: " + error.message : "تم تحديث كلمة المرور بنجاح.");
+    } else if (newPassword !== null) {
+      alert("كلمة المرور يجب أن تكون 6 أحرف على الأقل.");
+    }
+  }
   const nextUser = session?.user || null;
 
   if (currentUser?.id === nextUser?.id) return;
