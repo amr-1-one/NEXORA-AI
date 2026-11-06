@@ -19,7 +19,7 @@ export default {
         const messages = body.messages || [];
 
         // هنا بتبعت الطلب لـ Google Gemini API باستخدام مفتاحك المخزن في الـ Environment Variables (GEMINI_API_KEY)
-        const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${env.GEMINI_API_KEY}`, {
+      https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${env.GEMINI_API_KEY}
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ contents: messages.map(m => ({ role: m.role, parts: [{ text: m.text }] })) })
