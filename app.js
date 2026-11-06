@@ -1,4 +1,8 @@
-// ضع رابط Cloudflare Worker بعد نشره في هذا المتغير:
+
+// ==========================================
+// NEXORA AI - Main Application
+// ==========================================
+
 const API_URL = "https://nexora-ai.egyptianshops1.workers.dev";
 
 const form = document.getElementById("chatForm");
@@ -9,76 +13,238 @@ const welcome = document.getElementById("welcome");
 const historyEl = document.getElementById("history");
 
 let messages = [];
-let conversations = JSON.parse(localStorage.getItem("amr-ai-chats") || "[]");
+
+let conversations = JSON.parse(
+  localStorage.getItem("amr-ai-chats") || "[]"
+);
+
+let activeChatId = null;
+let isTyping = false;
+
+// إنشاء معرف للمحادثات القديمة
+conversations = conversations.map(chat => ({
+  ...chat,
+  id: chat.id || crypto.randomUUID()
+}));
+
+// ==========================================
+// حفظ المحادثات
+// ==========================================
 
 function saveConversations() {
-  localStorage.setItem("amr-ai-chats", JSON.stringify(conversations.slice(0, 30)));
+  localStorage.setItem(
+    "amr-ai-chats",
+    JSON.stringify(conversations.slice(0, 30))
+  );
+
   renderHistory();
 }
+
+// ==========================================
+// عرض سجل المحادثات
+// ==========================================
+
 function renderHistory() {
   historyEl.innerHTML = "";
-  conversations.forEach((chat, index) => {
+
+  conversations.forEach(chat => {
     const btn = document.createElement("button");
+
     btn.className = "history-item";
     btn.textContent = chat.title || "محادثة جديدة";
+
+    if (chat.id === activeChatId) {
+      btn.classList.add("active");
+    }
+
     btn.addEventListener("click", () => {
-      messages = chat.messages || [];
+      activeChatId = chat.id;
+      messages = [...(chat.messages || [])];
+
       renderMessages();
+
       document.querySelector(".sidebar").classList.remove("open");
     });
+
     historyEl.appendChild(btn);
   });
 }
+
+// ==========================================
+// حفظ المحادثة الحالية بدون تكرار
+// ==========================================
+
+function persistCurrent() {
+  if (!messages.length) return;
+
+  const title =
+    messages.find(m => m.role === "user")?.text.slice(0, 35) ||
+    "محادثة جديدة";
+
+  let chat = conversations.find(c => c.id === activeChatId);
+
+  if (chat) {
+    chat.messages = [...messages];
+    chat.title = title;
+    chat.updatedAt = Date.now();
+  } else {
+    activeChatId = crypto.randomUUID();
+
+    chat = {
+      id: activeChatId,
+      title,
+      messages: [...messages],
+      updatedAt: Date.now()
+    };
+
+    conversations.unshift(chat);
+  }
+
+  conversations.sort(
+    (a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)
+  );
+
+  conversations = conversations.slice(0, 30);
+
+  saveConversations();
+}
+
+// ==========================================
+// إضافة رسالة
+// ==========================================
+
 function addMessage(role, text) {
-  const item = { role, text };
-  messages.push(item);
+  messages.push({ role, text });
   renderMessages();
 }
+
+// ==========================================
+// عرض الرسائل
+// ==========================================
+
 function renderMessages() {
   welcome.style.display = messages.length ? "none" : "flex";
+
   messagesEl.innerHTML = "";
+
   messages.forEach(msg => {
     const row = document.createElement("div");
     row.className = `message ${msg.role}`;
+
     const avatar = document.createElement("div");
     avatar.className = "msg-avatar";
     avatar.textContent = msg.role === "user" ? "أنت" : "✦";
+
     const bubble = document.createElement("div");
     bubble.className = "bubble";
     bubble.textContent = msg.text;
+
     row.append(avatar, bubble);
     messagesEl.appendChild(row);
   });
-  document.getElementById("conversation").scrollTop = document.getElementById("conversation").scrollHeight;
+
+  scrollToBottom();
 }
-function persistCurrent() {
-  if (!messages.length) return;
-  const title = messages.find(m => m.role === "user")?.text.slice(0, 35) || "محادثة جديدة";
-  conversations.unshift({ title, messages });
-  conversations = conversations.slice(0, 30);
-  saveConversations();
+
+function scrollToBottom() {
+  const conversation = document.getElementById("conversation");
+
+  conversation.scrollTop = conversation.scrollHeight;
 }
+
+// ==========================================
+// تأثير الكتابة التدريجية
+// ==========================================
+
+function typeAssistantMessage(text) {
+  return new Promise(resolve => {
+    const row = document.createElement("div");
+    row.className = "message assistant";
+
+    const avatar = document.createElement("div");
+    avatar.className = "msg-avatar";
+    avatar.textContent = "✦";
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+
+    row.append(avatar, bubble);
+    messagesEl.appendChild(row);
+
+    welcome.style.display = "none";
+
+    let position = 0;
+    const chunkSize = 4;
+
+    function typeNext() {
+      position = Math.min(position + chunkSize, text.length);
+
+      bubble.textContent = text.slice(0, position);
+
+      scrollToBottom();
+
+      if (position < text.length) {
+        setTimeout(typeNext, 12);
+      } else {
+        messages.push({
+          role: "assistant",
+          text
+        });
+
+        persistCurrent();
+        resolve();
+      }
+    }
+
+    typeNext();
+  });
+}
+
+// ==========================================
+// إرسال الرسائل إلى Gemini
+// ==========================================
+
 async function sendMessage(text) {
   const clean = text.trim();
-  if (!clean || sendBtn.disabled) return;
-  if (!API_URL.startsWith("https://") || API_URL.includes("YOUR-WORKER-NAME")) {
-    alert("لازم تضيف رابط Cloudflare Worker في ملف app.js أولًا.");
+
+  if (!clean || sendBtn.disabled || isTyping) return;
+
+  if (
+    !API_URL.startsWith("https://") ||
+    API_URL.includes("YOUR-WORKER-NAME")
+  ) {
+    alert("تأكد من رابط Cloudflare Worker.");
     return;
   }
 
   addMessage("user", clean);
+
   input.value = "";
   input.style.height = "auto";
+
   sendBtn.disabled = true;
+  isTyping = true;
+
   const waiting = document.createElement("div");
+
   waiting.className = "message assistant";
-  waiting.innerHTML = '<div class="msg-avatar">✦</div><div class="bubble typing">AMR AI بيفكر...</div>';
+
+  waiting.innerHTML = `
+    <div class="msg-avatar">✦</div>
+    <div class="bubble typing">NEXORA AI بيفكر...</div>
+  `;
+
   messagesEl.appendChild(waiting);
+  scrollToBottom();
 
   try {
     const response = await fetch(`${API_URL}/api/chat`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+
+      headers: {
+        "Content-Type": "application/json"
+      },
+
       body: JSON.stringify({
         messages: messages.slice(-12).map(m => ({
           role: m.role === "assistant" ? "model" : "user",
@@ -86,52 +252,124 @@ async function sendMessage(text) {
         }))
       })
     });
+
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || `خطأ من الخادم: ${response.status}`);
-    if (!data.reply) throw new Error("الخادم لم يرجع إجابة.");
+
+    if (!response.ok) {
+      throw new Error(
+        data.error || `خطأ من الخادم: ${response.status}`
+      );
+    }
+
+    if (!data.reply || typeof data.reply !== "string") {
+      throw new Error("الخادم لم يرجع إجابة صحيحة.");
+    }
+
     waiting.remove();
-    addMessage("assistant", data.reply);
-    persistCurrent();
+
+    await typeAssistantMessage(data.reply);
+
   } catch (error) {
     waiting.remove();
-    addMessage("assistant", `حصل خطأ: ${error.message}\nتأكد من نشر Worker وضبط مفتاح Gemini ورابط الخادم.`);
+
+    addMessage(
+      "assistant",
+      `حدث خطأ: ${error.message}\nتأكد من اتصال الخادم وإعدادات Gemini.`
+    );
+
+    persistCurrent();
+
   } finally {
     sendBtn.disabled = false;
+    isTyping = false;
     input.focus();
   }
 }
+
+// ==========================================
+// إرسال النموذج
+// ==========================================
 
 form.addEventListener("submit", e => {
   e.preventDefault();
   sendMessage(input.value);
 });
+
+// ==========================================
+// تكبير مربع الكتابة
+// ==========================================
+
 input.addEventListener("input", () => {
   input.style.height = "auto";
-  input.style.height = Math.min(input.scrollHeight, 180) + "px";
+
+  input.style.height =
+    Math.min(input.scrollHeight, 180) + "px";
 });
+
+// ==========================================
+// Enter للإرسال
+// ==========================================
+
 input.addEventListener("keydown", e => {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
     form.requestSubmit();
   }
 });
+
+// ==========================================
+// الاقتراحات الجاهزة
+// ==========================================
+
 document.querySelectorAll(".suggestion").forEach(btn => {
-  btn.addEventListener("click", () => sendMessage(btn.dataset.prompt));
+  btn.addEventListener("click", () => {
+    sendMessage(btn.dataset.prompt);
+  });
 });
+
+// ==========================================
+// محادثة جديدة
+// ==========================================
+
 document.getElementById("newChat").addEventListener("click", () => {
+  if (isTyping) return;
+
   messages = [];
+  activeChatId = null;
+
   renderMessages();
+  renderHistory();
+
   document.querySelector(".sidebar").classList.remove("open");
 });
+
+// ==========================================
+// مسح المحادثة الحالية
+// ==========================================
+
 document.getElementById("clearChat").addEventListener("click", () => {
-  if (!messages.length) return;
+  if (!messages.length || isTyping) return;
+
   if (confirm("تمسح المحادثة الحالية من الشاشة؟")) {
     messages = [];
+    activeChatId = null;
+
     renderMessages();
+    renderHistory();
   }
 });
+
+// ==========================================
+// القائمة الجانبية
+// ==========================================
+
 document.getElementById("menuBtn").addEventListener("click", () => {
   document.querySelector(".sidebar").classList.toggle("open");
 });
+
+// ==========================================
+// تشغيل التطبيق
+// ==========================================
+
 renderHistory();
 renderMessages();
