@@ -1,9 +1,9 @@
-
-// ==========================================
-// NEXORA AI - Main Application
-// ==========================================
-
+// NEXORA AI - Supabase authentication and per-user conversations
 const API_URL = "https://nexora-ai.egyptianshops1.workers.dev";
+const SUPABASE_URL = "https://phnknceukzdsaibaoklx.supabase.co";
+const SUPABASE_KEY = "sb_publishable_6Ox7ZfOWOE5iFJFus2MsTw_aedbJSU9";
+
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const form = document.getElementById("chatForm");
 const input = document.getElementById("prompt");
@@ -12,137 +12,196 @@ const messagesEl = document.getElementById("messages");
 const welcome = document.getElementById("welcome");
 const historyEl = document.getElementById("history");
 
+const authModal = document.getElementById("authModal");
+const authForm = document.getElementById("authForm");
+const authEmail = document.getElementById("authEmail");
+const authPassword = document.getElementById("authPassword");
+const authMessage = document.getElementById("authMessage");
+const authTitle = document.getElementById("authTitle");
+const authSubmit = document.getElementById("authSubmit");
+const loginTab = document.getElementById("loginTab");
+const signupTab = document.getElementById("signupTab");
+const authOpen = document.getElementById("authOpen");
+const logoutBtn = document.getElementById("logoutBtn");
+
 let messages = [];
-
-let conversations = JSON.parse(
-  localStorage.getItem("amr-ai-chats") || "[]"
-);
-
+let conversations = [];
 let activeChatId = null;
 let isTyping = false;
+let currentUser = null;
+let authMode = "login";
 
-// ==========================================
-// معرفات المحادثات القديمة
-// ==========================================
+function setAuthMessage(message, isError = false) {
+  authMessage.textContent = message;
+  authMessage.style.color = isError ? "#d34b62" : "#5c3dcc";
+}
 
-conversations = conversations.map(chat => ({
-  ...chat,
-  id: chat.id || crypto.randomUUID()
-}));
+function openAuthModal(mode = "login") {
+  setAuthMode(mode);
+  setAuthMessage("");
+  authModal.classList.remove("hidden");
+}
 
-// ==========================================
-// حفظ المحادثات
-// ==========================================
+function closeAuthModal() {
+  authModal.classList.add("hidden");
+}
 
-function saveConversations() {
-  localStorage.setItem(
-    "amr-ai-chats",
-    JSON.stringify(conversations.slice(0, 30))
-  );
+function setAuthMode(mode) {
+  authMode = mode;
+  const isSignup = mode === "signup";
+  loginTab.classList.toggle("active", !isSignup);
+  signupTab.classList.toggle("active", isSignup);
+  authTitle.textContent = isSignup ? "أنشئ حسابك في NEXORA" : "مرحبًا بك في NEXORA";
+  document.querySelector(".modal-subtitle").textContent = isSignup
+    ? "أنشئ حسابًا لحفظ محادثاتك والوصول إليها من أي جهاز."
+    : "سجّل دخولك للوصول إلى محادثاتك المحفوظة.";
+  authPassword.autocomplete = isSignup ? "new-password" : "current-password";
+}
 
+function updateProfile() {
+  const nameEl = document.getElementById("profileName");
+  const emailEl = document.getElementById("profileEmail");
+  const avatarEl = document.getElementById("profileAvatar");
+
+  if (currentUser) {
+    nameEl.textContent = currentUser.user_metadata?.name || currentUser.email.split("@")[0];
+    emailEl.textContent = currentUser.email;
+    avatarEl.textContent = (currentUser.email || "N").charAt(0).toUpperCase();
+    authOpen.classList.add("hidden");
+    logoutBtn.classList.remove("hidden");
+  } else {
+    nameEl.textContent = "زائر";
+    emailEl.textContent = "سجّل الدخول لحفظ محادثاتك";
+    avatarEl.textContent = "N";
+    authOpen.classList.remove("hidden");
+    logoutBtn.classList.add("hidden");
+  }
+}
+
+function readGuestChats() {
+  try {
+    return JSON.parse(localStorage.getItem("nexora-guest-chats") || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveGuestChats() {
+  localStorage.setItem("nexora-guest-chats", JSON.stringify(conversations.slice(0, 30)));
+}
+
+async function loadUserChats() {
+  if (!currentUser) return;
+
+  const { data, error } = await supabaseClient
+    .from("nexora_chats")
+    .select("id,title,messages,updated_at")
+    .eq("user_id", currentUser.id)
+    .order("updated_at", { ascending: false })
+    .limit(30);
+
+  if (error) {
+    console.error("Load chats error:", error);
+    alert("تم تسجيل الدخول، لكن تعذّر تحميل المحادثات. تأكد من تنفيذ ملف supabase-schema.sql في Supabase.");
+    conversations = [];
+  } else {
+    conversations = (data || []).map(chat => ({
+      id: chat.id,
+      title: chat.title || "محادثة جديدة",
+      messages: Array.isArray(chat.messages) ? chat.messages : [],
+      updatedAt: new Date(chat.updated_at).getTime()
+    }));
+  }
+
+  messages = [];
+  activeChatId = null;
+  renderMessages();
   renderHistory();
 }
 
-// ==========================================
-// عرض سجل المحادثات
-// ==========================================
+async function persistCurrent() {
+  if (!messages.length) return;
+
+  const title = messages.find(message => message.role === "user")?.text.slice(0, 35) || "محادثة جديدة";
+  const chatId = activeChatId || crypto.randomUUID();
+  activeChatId = chatId;
+
+  const chat = {
+    id: chatId,
+    title,
+    messages: [...messages],
+    updatedAt: Date.now()
+  };
+
+  const existingIndex = conversations.findIndex(item => item.id === chatId);
+  if (existingIndex >= 0) conversations[existingIndex] = chat;
+  else conversations.unshift(chat);
+
+  conversations.sort((a, b) => b.updatedAt - a.updatedAt);
+  conversations = conversations.slice(0, 30);
+  renderHistory();
+
+  if (!currentUser) {
+    saveGuestChats();
+    return;
+  }
+
+  const { error } = await supabaseClient.from("nexora_chats").upsert({
+    id: chat.id,
+    user_id: currentUser.id,
+    title: chat.title,
+    messages: chat.messages,
+    updated_at: new Date(chat.updatedAt).toISOString()
+  }, { onConflict: "id" });
+
+  if (error) {
+    console.error("Save chat error:", error);
+    alert("تعذّر حفظ المحادثة في حسابك: " + error.message);
+  }
+}
 
 function renderHistory() {
   historyEl.innerHTML = "";
 
   conversations.forEach(chat => {
-    const btn = document.createElement("button");
+    const button = document.createElement("button");
+    button.className = "history-item";
+    button.textContent = chat.title || "محادثة جديدة";
 
-    btn.className = "history-item";
-    btn.textContent = chat.title || "محادثة جديدة";
+    if (chat.id === activeChatId) button.classList.add("active");
 
-    if (chat.id === activeChatId) {
-      btn.classList.add("active");
-    }
-
-    btn.addEventListener("click", () => {
+    button.addEventListener("click", () => {
       if (isTyping) return;
-
       activeChatId = chat.id;
       messages = [...(chat.messages || [])];
-
       renderMessages();
-
       document.querySelector(".sidebar").classList.remove("open");
     });
 
-    historyEl.appendChild(btn);
+    historyEl.appendChild(button);
   });
 }
-
-// ==========================================
-// حفظ المحادثة الحالية
-// ==========================================
-
-function persistCurrent() {
-  if (!messages.length) return;
-
-  const title =
-    messages.find(m => m.role === "user")?.text.slice(0, 35) ||
-    "محادثة جديدة";
-
-  let chat = conversations.find(c => c.id === activeChatId);
-
-  if (chat) {
-    chat.messages = [...messages];
-    chat.title = title;
-    chat.updatedAt = Date.now();
-  } else {
-    activeChatId = crypto.randomUUID();
-
-    chat = {
-      id: activeChatId,
-      title,
-      messages: [...messages],
-      updatedAt: Date.now()
-    };
-
-    conversations.unshift(chat);
-  }
-
-  conversations.sort(
-    (a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)
-  );
-
-  conversations = conversations.slice(0, 30);
-
-  saveConversations();
-}
-
-// ==========================================
-// إضافة رسالة
-// ==========================================
 
 function addMessage(role, text) {
   messages.push({ role, text });
   renderMessages();
 }
 
-// ==========================================
-// عرض الرسائل
-// ==========================================
-
 function renderMessages() {
   welcome.style.display = messages.length ? "none" : "flex";
-
   messagesEl.innerHTML = "";
 
-  messages.forEach(msg => {
+  messages.forEach(message => {
     const row = document.createElement("div");
-    row.className = `message ${msg.role}`;
+    row.className = "message " + message.role;
 
     const avatar = document.createElement("div");
     avatar.className = "msg-avatar";
-    avatar.textContent = msg.role === "user" ? "أنت" : "✦";
+    avatar.textContent = message.role === "user" ? "أنت" : "✦";
 
     const bubble = document.createElement("div");
     bubble.className = "bubble";
-    bubble.textContent = msg.text;
+    bubble.textContent = message.text;
 
     row.append(avatar, bubble);
     messagesEl.appendChild(row);
@@ -151,43 +210,25 @@ function renderMessages() {
   scrollToBottom();
 }
 
-// ==========================================
-// النزول لآخر المحادثة
-// ==========================================
-
 function scrollToBottom() {
   const conversation = document.getElementById("conversation");
-
   conversation.scrollTop = conversation.scrollHeight;
 }
 
-// ==========================================
-// تقسيم الإجابة إلى أسطر
-// ==========================================
-
 function splitResponseIntoLines(text) {
-  const originalLines = text.split("\n");
   const result = [];
   const maxCharacters = 75;
 
-  originalLines.forEach(originalLine => {
-    if (!originalLine.trim()) {
+  text.split("\n").forEach(line => {
+    if (!line.trim()) {
       result.push("");
       return;
     }
 
-    const words = originalLine.split(/\s+/);
     let currentLine = "";
-
-    words.forEach(word => {
-      const testLine = currentLine
-        ? currentLine + " " + word
-        : word;
-
-      if (
-        testLine.length > maxCharacters &&
-        currentLine
-      ) {
+    line.split(/\s+/).forEach(word => {
+      const testLine = currentLine ? currentLine + " " + word : word;
+      if (testLine.length > maxCharacters && currentLine) {
         result.push(currentLine);
         currentLine = word;
       } else {
@@ -195,17 +236,11 @@ function splitResponseIntoLines(text) {
       }
     });
 
-    if (currentLine) {
-      result.push(currentLine);
-    }
+    if (currentLine) result.push(currentLine);
   });
 
   return result;
 }
-
-// ==========================================
-// عرض رد NEXORA AI سطرًا بعد سطر
-// ==========================================
 
 function typeAssistantMessage(text) {
   return new Promise(resolve => {
@@ -221,49 +256,31 @@ function typeAssistantMessage(text) {
 
     row.append(avatar, bubble);
     messagesEl.appendChild(row);
-
     welcome.style.display = "none";
 
     const lines = splitResponseIntoLines(text);
-
     let index = 0;
 
     function showNextLine() {
       if (index >= lines.length) {
-        messages.push({
-          role: "assistant",
-          text
-        });
-
+        messages.push({ role: "assistant", text });
         persistCurrent();
         resolve();
         return;
       }
 
-      if (index > 0) {
-        bubble.textContent += "\n";
-      }
-
-      bubble.textContent += lines[index];
-
-      index++;
-
+      if (index > 0) bubble.textContent += "\n";
+      bubble.textContent += lines[index++];
       scrollToBottom();
-
-      setTimeout(showNextLine, 160);
+      setTimeout(showNextLine, 100);
     }
 
     showNextLine();
   });
 }
 
-// ==========================================
-// إرسال الرسائل إلى Gemini
-// ==========================================
-
 async function sendMessage(text) {
   const clean = text.trim();
-
   if (!clean || sendBtn.disabled || isTyping) return;
 
   if (!API_URL.startsWith("https://")) {
@@ -272,67 +289,48 @@ async function sendMessage(text) {
   }
 
   addMessage("user", clean);
-
   input.value = "";
   input.style.height = "auto";
-
   sendBtn.disabled = true;
   isTyping = true;
 
   const waiting = document.createElement("div");
-
   waiting.className = "message assistant";
 
-  waiting.innerHTML = `
-    <div class="msg-avatar">✦</div>
-    <div class="bubble typing">NEXORA AI بيفكر...</div>
-  `;
+  const waitingAvatar = document.createElement("div");
+  waitingAvatar.className = "msg-avatar";
+  waitingAvatar.textContent = "✦";
 
+  const waitingBubble = document.createElement("div");
+  waitingBubble.className = "bubble typing";
+  waitingBubble.textContent = "NEXORA AI بيفكر...";
+
+  waiting.append(waitingAvatar, waitingBubble);
   messagesEl.appendChild(waiting);
   scrollToBottom();
 
   try {
-    const response = await fetch(`${API_URL}/api/chat`, {
+    const response = await fetch(API_URL + "/api/chat", {
       method: "POST",
-
-      headers: {
-        "Content-Type": "application/json"
-      },
-
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        messages: messages.slice(-12).map(m => ({
-          role: m.role === "assistant" ? "model" : "user",
-          text: m.text
+        messages: messages.slice(-12).map(message => ({
+          role: message.role === "assistant" ? "model" : "user",
+          text: message.text
         }))
       })
     });
 
     const data = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      throw new Error(
-        data.error || `خطأ من الخادم: ${response.status}`
-      );
-    }
-
-    if (!data.reply || typeof data.reply !== "string") {
-      throw new Error("الخادم لم يرجع إجابة صحيحة.");
-    }
+    if (!response.ok) throw new Error(data.error || "خطأ من الخادم: " + response.status);
+    if (!data.reply || typeof data.reply !== "string") throw new Error("الخادم لم يرجع إجابة صحيحة.");
 
     waiting.remove();
-
     await typeAssistantMessage(data.reply);
-
   } catch (error) {
     waiting.remove();
-
-    addMessage(
-      "assistant",
-      `حدث خطأ: ${error.message}\nتأكد من اتصال الخادم وإعدادات Gemini.`
-    );
-
-    persistCurrent();
-
+    addMessage("assistant", "حدث خطأ: " + error.message + "\nتأكد من اتصال الخادم وإعدادات Gemini.");
+    await persistCurrent();
   } finally {
     sendBtn.disabled = false;
     isTyping = false;
@@ -340,66 +338,35 @@ async function sendMessage(text) {
   }
 }
 
-// ==========================================
-// إرسال النموذج
-// ==========================================
-
-form.addEventListener("submit", e => {
-  e.preventDefault();
+form.addEventListener("submit", event => {
+  event.preventDefault();
   sendMessage(input.value);
 });
 
-// ==========================================
-// تكبير مربع الكتابة
-// ==========================================
-
 input.addEventListener("input", () => {
   input.style.height = "auto";
-
-  input.style.height =
-    Math.min(input.scrollHeight, 180) + "px";
+  input.style.height = Math.min(input.scrollHeight, 180) + "px";
 });
 
-// ==========================================
-// Enter للإرسال
-// ==========================================
-
-input.addEventListener("keydown", e => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
+input.addEventListener("keydown", event => {
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
     form.requestSubmit();
   }
 });
 
-// ==========================================
-// الاقتراحات الجاهزة
-// ==========================================
-
-document.querySelectorAll(".suggestion").forEach(btn => {
-  btn.addEventListener("click", () => {
-    sendMessage(btn.dataset.prompt);
-  });
+document.querySelectorAll(".suggestion").forEach(button => {
+  button.addEventListener("click", () => sendMessage(button.dataset.prompt));
 });
-
-// ==========================================
-// محادثة جديدة
-// ==========================================
 
 document.getElementById("newChat").addEventListener("click", () => {
   if (isTyping) return;
-
   messages = [];
   activeChatId = null;
-
   renderMessages();
   renderHistory();
-
   document.querySelector(".sidebar").classList.remove("open");
 });
-
-// ==========================================
-// مسح المحادثة الحالية من الشاشة
-// ==========================================
 
 document.getElementById("clearChat").addEventListener("click", () => {
   if (!messages.length || isTyping) return;
@@ -407,23 +374,115 @@ document.getElementById("clearChat").addEventListener("click", () => {
   if (confirm("تمسح المحادثة الحالية من الشاشة؟")) {
     messages = [];
     activeChatId = null;
-
     renderMessages();
     renderHistory();
   }
 });
 
-// ==========================================
-// القائمة الجانبية
-// ==========================================
-
 document.getElementById("menuBtn").addEventListener("click", () => {
   document.querySelector(".sidebar").classList.toggle("open");
 });
 
-// ==========================================
-// تشغيل التطبيق
-// ==========================================
+authOpen.addEventListener("click", () => openAuthModal("login"));
+document.getElementById("authClose").addEventListener("click", closeAuthModal);
 
-renderHistory();
-renderMessages();
+authModal.addEventListener("click", event => {
+  if (event.target === authModal) closeAuthModal();
+});
+
+loginTab.addEventListener("click", () => {
+  setAuthMode("login");
+  setAuthMessage("");
+});
+
+signupTab.addEventListener("click", () => {
+  setAuthMode("signup");
+  setAuthMessage("");
+});
+
+authForm.addEventListener("submit", async event => {
+  event.preventDefault();
+
+  const email = authEmail.value.trim();
+  const password = authPassword.value;
+
+  authSubmit.disabled = true;
+  authSubmit.textContent = "جارٍ التنفيذ...";
+  setAuthMessage("");
+
+  try {
+    if (authMode === "signup") {
+      const { data, error } = await supabaseClient.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: "https://amr-1-one.github.io/NEXORA-AI/"
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.session) {
+        setAuthMessage("تم إنشاء الحساب وتسجيل الدخول بنجاح.");
+      } else {
+        setAuthMessage("تم إنشاء الحساب. افتح رسالة التأكيد التي أرسلناها إلى بريدك الإلكتروني، ثم سجّل الدخول.");
+      }
+    } else {
+      const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      setAuthMessage("تم تسجيل الدخول بنجاح.");
+    }
+  } catch (error) {
+    setAuthMessage(error.message || "حدث خطأ. حاول مرة أخرى.", true);
+  } finally {
+    authSubmit.disabled = false;
+    authSubmit.textContent = authMode === "signup" ? "إنشاء حساب" : "تسجيل الدخول";
+  }
+});
+
+logoutBtn.addEventListener("click", async () => {
+  const { error } = await supabaseClient.auth.signOut();
+  if (error) alert("تعذّر تسجيل الخروج: " + error.message);
+});
+
+supabaseClient.auth.onAuthStateChange((_event, session) => {
+  const nextUser = session?.user || null;
+
+  if (currentUser?.id === nextUser?.id) return;
+
+  currentUser = nextUser;
+  updateProfile();
+
+  // Run data requests after the auth callback releases Supabase's internal lock.
+  setTimeout(async () => {
+    if (currentUser) {
+      await loadUserChats();
+      closeAuthModal();
+    } else {
+      conversations = readGuestChats();
+      messages = [];
+      activeChatId = null;
+      renderMessages();
+      renderHistory();
+    }
+  }, 0);
+});
+
+async function initializeApp() {
+  const { data, error } = await supabaseClient.auth.getSession();
+
+  if (error) console.error("Session error:", error);
+
+  currentUser = data.session?.user || null;
+  updateProfile();
+
+  if (currentUser) {
+    await loadUserChats();
+  } else {
+    conversations = readGuestChats();
+    renderHistory();
+    renderMessages();
+  }
+}
+
+initializeApp();
