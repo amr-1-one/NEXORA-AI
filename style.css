@@ -621,3 +621,22 @@ textarea::placeholder {
     padding: 25px 20px;
   }
 }
+
+
+.auth-reset-link {
+  display: block;
+  margin: 10px auto 0;
+  padding: 5px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--purple-dark);
+  font-size: 12px;
+  cursor: pointer;
+}
+.auth-reset-link:hover {
+  text-decoration: underline;
+}
+.auth-reset-link:disabled {
+  opacity: .55;
+  cursor: wait;
+}
