@@ -636,7 +636,7 @@ logoutBtn.addEventListener("click", async () => {
   if (error) alert("تعذّر تسجيل الخروج: " + error.message);
 });
 
-supabaseClient.auth.onAuthStateChange((_event, session) => {
+supabaseClient.auth.onAuthStateChange(async (_event, session) => {
   if (_event === "PASSWORD_RECOVERY") {
     setTimeout(async () => {
       const newPassword = prompt("اكتب كلمة المرور الجديدة (6 أحرف على الأقل):");
