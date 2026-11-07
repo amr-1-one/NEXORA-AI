@@ -86,8 +86,8 @@ function applyPreferences() {
     ".welcome h1": "Welcome to NEXORA AI",
     ".welcome p": "Ask, learn, create, and let's get started.",
     "#settingsOpen": "⚙️ Settings", "#settingsTitle": "NEXORA Settings",
-    "#settingsName": "Display name", "#settingsLanguage": "Interface language",
-    "#settingsTheme": "Appearance", "#settingsColor": "Accent color",
+    'label[for="settingsName"]': "Display name", 'label[for="settingsLanguage"]': "Interface language",
+    'label[for="settingsTheme"]': "Appearance", 'label[for="settingsColor"]': "Accent color",
     "#settingsSave": "Save settings", "#settingsCancel": "Cancel",
     "#settingsClose": "×"
   } : {
@@ -99,6 +99,8 @@ function applyPreferences() {
     ".welcome h1": "أهلاً بك في NEXORA AI",
     ".welcome p": "اسأل، تعلّم، ابتكر، ودعنا نبدأ من هنا.",
     "#settingsOpen": "⚙️ الإعدادات", "#settingsTitle": "إعدادات NEXORA",
+    'label[for="settingsName"]': "اسم العرض", 'label[for="settingsLanguage"]': "لغة الواجهة",
+    'label[for="settingsTheme"]': "المظهر", 'label[for="settingsColor"]': "اللون الأساسي",
     "#settingsSave": "حفظ الإعدادات", "#settingsCancel": "إلغاء",
     "#settingsClose": "×"
   };
@@ -536,19 +538,7 @@ document.getElementById("settingsModal").addEventListener("click", event => {
 document.getElementById("settingsForm").addEventListener("submit", async event => {
   await savePreferences(event);
 });
-document.getElementById("settingsLanguage").addEventListener("change", event => {
-  preferences.language = event.target.value;
-  applyPreferences();
-});
-document.getElementById("settingsTheme").addEventListener("change", event => {
-  preferences.theme = event.target.value;
-  applyPreferences();
-});
-document.getElementById("settingsColor").addEventListener("input", event => {
-  preferences.color = event.target.value;
-  applyPreferences();
-});
-
+// Settings are applied only after the user presses Save.
 
 
 const resetPasswordBtn = document.getElementById("resetPasswordBtn");
