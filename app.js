@@ -58,15 +58,146 @@ function setAuthMode(mode) {
   authPassword.autocomplete = isSignup ? "new-password" : "current-password";
 }
 
+
+const defaultPreferences = { name: "", language: "ar", theme: "light", color: "#7455e8" };
+let preferences = { ...defaultPreferences };
+
+function validHexColor(value) {
+  return /^#[0-9a-f]{6}$/i.test(value || "");
+}
+
+function applyPreferences() {
+  const root = document.documentElement;
+  root.dataset.theme = preferences.theme === "dark" ? "dark" : "light";
+  const color = validHexColor(preferences.color) ? preferences.color : defaultPreferences.color;
+  root.style.setProperty("--purple", color);
+  root.style.setProperty("--purple-dark", color);
+  root.style.setProperty("--purple-light", color + "18");
+  const isEnglish = preferences.language === "en";
+  document.documentElement.lang = isEnglish ? "en" : "ar";
+  document.documentElement.dir = isEnglish ? "ltr" : "rtl";
+
+  const translations = isEnglish ? {
+    "#newChat": "＋ New chat", ".side-label": "Your chats",
+    "#authOpen": "Sign in / Create account", "#logoutBtn": "Sign out",
+    "#clearChat": "Clear chat", "#prompt": "Message NEXORA AI...",
+    ".disclaimer": "NEXORA AI can make mistakes; check important information.",
+    ".eyebrow": "A smart space for all your ideas",
+    ".welcome h1": "Welcome to NEXORA AI",
+    ".welcome p": "Ask, learn, create, and let's get started.",
+    "#settingsOpen": "⚙️ Settings", "#settingsTitle": "NEXORA Settings",
+    "#settingsName": "Display name", "#settingsLanguage": "Interface language",
+    "#settingsTheme": "Appearance", "#settingsColor": "Accent color",
+    "#settingsSave": "Save settings", "#settingsCancel": "Cancel",
+    "#settingsClose": "×"
+  } : {
+    "#newChat": "＋ محادثة جديدة", ".side-label": "محادثاتك",
+    "#authOpen": "تسجيل الدخول / إنشاء حساب", "#logoutBtn": "تسجيل الخروج",
+    "#clearChat": "مسح المحادثة", "#prompt": "اكتب رسالتك إلى NEXORA AI...",
+    ".disclaimer": "قد يخطئ NEXORA AI أحيانًا؛ راجع المعلومات المهمة.",
+    ".eyebrow": "مساحة ذكية لكل أفكارك",
+    ".welcome h1": "أهلاً بك في NEXORA AI",
+    ".welcome p": "اسأل، تعلّم، ابتكر، ودعنا نبدأ من هنا.",
+    "#settingsOpen": "⚙️ الإعدادات", "#settingsTitle": "إعدادات NEXORA",
+    "#settingsSave": "حفظ الإعدادات", "#settingsCancel": "إلغاء",
+    "#settingsClose": "×"
+  };
+  Object.entries(translations).forEach(([selector, value]) => {
+    const element = document.querySelector(selector);
+    if (!element) return;
+    if (selector === "#prompt") element.placeholder = value;
+    else if (selector === ".welcome h1") element.innerHTML = isEnglish ? 'Welcome to <span>NEXORA AI</span>' : 'أهلاً بك في <span>NEXORA AI</span>';
+    else element.textContent = value;
+  });
+  document.querySelectorAll(".suggestion").forEach((button, index) => {
+    const en = ["💡 Explain a topic", "⌨️ Write some code", "📚 Help me study", "🚀 Suggest ideas"];
+    const ar = ["💡 اشرح لي موضوعًا", "⌨️ اكتب لي كودًا", "📚 ساعدني في المذاكرة", "🚀 اقترح أفكارًا"];
+    button.textContent = (isEnglish ? en : ar)[index] || button.textContent;
+  });
+  const nameEl = document.getElementById("profileName");
+  if (currentUser && preferences.name) nameEl.textContent = preferences.name;
+  const saveButton = document.getElementById("settingsSave");
+  if (saveButton) saveButton.textContent = isEnglish ? "Save settings" : "حفظ الإعدادات";
+}
+
+function loadLocalPreferences() {
+  try {
+    return { ...defaultPreferences, ...(JSON.parse(localStorage.getItem("nexora-preferences") || "{}")) };
+  } catch {
+    return { ...defaultPreferences };
+  }
+}
+
+async function loadPreferences() {
+  if (currentUser) {
+    const saved = currentUser.user_metadata?.nexora_preferences || {};
+    preferences = { ...defaultPreferences, ...saved };
+    if (!preferences.name) preferences.name = currentUser.user_metadata?.name || "";
+  } else {
+    preferences = loadLocalPreferences();
+  }
+  if (!["ar", "en"].includes(preferences.language)) preferences.language = "ar";
+  if (!["light", "dark"].includes(preferences.theme)) preferences.theme = "light";
+  if (!validHexColor(preferences.color)) preferences.color = defaultPreferences.color;
+  applyPreferences();
+}
+
+async function savePreferences(event) {
+  event.preventDefault();
+  const name = document.getElementById("settingsName").value.trim().slice(0, 40);
+  preferences = {
+    name,
+    language: document.getElementById("settingsLanguage").value,
+    theme: document.getElementById("settingsTheme").value,
+    color: document.getElementById("settingsColor").value
+  };
+  applyPreferences();
+  const message = document.getElementById("settingsMessage");
+  const saveButton = document.getElementById("settingsSave");
+  saveButton.disabled = true;
+  try {
+    if (currentUser) {
+      const { error } = await supabaseClient.auth.updateUser({
+        data: { name, nexora_preferences: preferences }
+      });
+      if (error) throw error;
+      const { data } = await supabaseClient.auth.getUser();
+      if (data.user) currentUser = data.user;
+      message.textContent = preferences.language === "en" ? "Settings saved to your account." : "تم حفظ الإعدادات في حسابك بنجاح.";
+    } else {
+      localStorage.setItem("nexora-preferences", JSON.stringify(preferences));
+      message.textContent = preferences.language === "en" ? "Settings saved on this device. Sign in to sync them across devices." : "تم حفظ الإعدادات على هذا الجهاز. سجّل الدخول لمزامنتها بين أجهزتك.";
+    }
+    updateProfile();
+    applyPreferences();
+    document.getElementById("settingsModal").classList.add("hidden");
+  } catch (error) {
+    message.textContent = (preferences.language === "en" ? "Could not save: " : "تعذّر الحفظ: ") + error.message;
+  } finally {
+    saveButton.disabled = false;
+  }
+}
+
+function openSettings() {
+  document.getElementById("settingsName").value = preferences.name || currentUser?.user_metadata?.name || "";
+  document.getElementById("settingsLanguage").value = preferences.language;
+  document.getElementById("settingsTheme").value = preferences.theme;
+  document.getElementById("settingsColor").value = preferences.color;
+  document.getElementById("settingsMessage").textContent = currentUser
+    ? (preferences.language === "en" ? "Your settings sync with your account." : "إعداداتك متزامنة مع حسابك.")
+    : (preferences.language === "en" ? "Guest settings are saved on this device only." : "إعدادات الزائر تُحفظ على هذا الجهاز فقط.");
+  document.getElementById("settingsModal").classList.remove("hidden");
+}
+
 function updateProfile() {
   const nameEl = document.getElementById("profileName");
   const emailEl = document.getElementById("profileEmail");
   const avatarEl = document.getElementById("profileAvatar");
 
   if (currentUser) {
-    nameEl.textContent = currentUser.user_metadata?.name || currentUser.email.split("@")[0];
+    nameEl.textContent = preferences.name || currentUser.user_metadata?.name || currentUser.email.split("@")[0];
     emailEl.textContent = currentUser.email;
-    avatarEl.textContent = (currentUser.email || "N").charAt(0).toUpperCase();
+    avatarEl.textContent = (preferences.name || currentUser.email || "N").charAt(0).toUpperCase();
     authOpen.classList.add("hidden");
     logoutBtn.classList.remove("hidden");
   } else {
@@ -396,6 +527,29 @@ document.getElementById("menuBtn").addEventListener("click", () => {
   document.querySelector(".sidebar").classList.toggle("open");
 });
 
+document.getElementById("settingsOpen").addEventListener("click", openSettings);
+document.getElementById("settingsClose").addEventListener("click", () => document.getElementById("settingsModal").classList.add("hidden"));
+document.getElementById("settingsCancel").addEventListener("click", () => document.getElementById("settingsModal").classList.add("hidden"));
+document.getElementById("settingsModal").addEventListener("click", event => {
+  if (event.target.id === "settingsModal") event.currentTarget.classList.add("hidden");
+});
+document.getElementById("settingsForm").addEventListener("submit", async event => {
+  await savePreferences(event);
+});
+document.getElementById("settingsLanguage").addEventListener("change", event => {
+  preferences.language = event.target.value;
+  applyPreferences();
+});
+document.getElementById("settingsTheme").addEventListener("change", event => {
+  preferences.theme = event.target.value;
+  applyPreferences();
+});
+document.getElementById("settingsColor").addEventListener("input", event => {
+  preferences.color = event.target.value;
+  applyPreferences();
+});
+
+
 
 const resetPasswordBtn = document.getElementById("resetPasswordBtn");
 resetPasswordBtn.addEventListener("click", async () => {
@@ -498,6 +652,7 @@ supabaseClient.auth.onAuthStateChange((_event, session) => {
   if (currentUser?.id === nextUser?.id) return;
 
   currentUser = nextUser;
+  await loadPreferences();
   updateProfile();
 
   // Run data requests after the auth callback releases Supabase's internal lock.
@@ -521,6 +676,7 @@ async function initializeApp() {
   if (error) console.error("Session error:", error);
 
   currentUser = data.session?.user || null;
+  await loadPreferences();
   updateProfile();
 
   if (currentUser) {
