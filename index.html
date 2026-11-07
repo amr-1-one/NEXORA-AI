@@ -81,8 +81,10 @@
       <footer class="composer-wrap">
         <form id="chatForm" class="composer">
           <textarea id="prompt" rows="1" placeholder="اكتب رسالتك إلى NEXORA AI..." aria-label="رسالتك"></textarea>
+          <button id="micBtn" class="mic-btn" type="button" aria-label="تسجيل صوتي" title="تسجيل صوتي">🎙️</button>
           <button id="sendBtn" class="send-btn" type="submit">↑</button>
         </form>
+        <div id="micStatus" class="mic-status" role="status" aria-live="polite"></div>
         <div class="disclaimer">
           قد يخطئ NEXORA AI أحيانًا؛ راجع المعلومات المهمة.
         </div>
