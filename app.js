@@ -8,6 +8,8 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const form = document.getElementById("chatForm");
 const input = document.getElementById("prompt");
 const sendBtn = document.getElementById("sendBtn");
+const micBtn = document.getElementById("micBtn");
+const micStatus = document.getElementById("micStatus");
 const messagesEl = document.getElementById("messages");
 const welcome = document.getElementById("welcome");
 const historyEl = document.getElementById("history");
@@ -30,6 +32,9 @@ let activeChatId = null;
 let isTyping = false;
 let currentUser = null;
 let authMode = "login";
+let speechRecognition = null;
+let isRecording = false;
+let speechBaseText = "";
 
 function setAuthMessage(message, isError = false) {
   authMessage.textContent = message;
@@ -498,6 +503,75 @@ input.addEventListener("keydown", event => {
   if (event.key === "Enter" && !event.shiftKey) {
     event.preventDefault();
     form.requestSubmit();
+  }
+});
+
+// Voice input: browser speech recognition converts speech into editable text.
+micBtn.addEventListener("click", () => {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    micStatus.textContent = preferences.language === "en"
+      ? "Voice input is not supported in this browser. Try the latest Chrome."
+      : "التسجيل الصوتي غير مدعوم في المتصفح ده. جرّب أحدث إصدار من Chrome.";
+    return;
+  }
+
+  if (isRecording && speechRecognition) {
+    speechRecognition.stop();
+    return;
+  }
+
+  speechRecognition = new SpeechRecognition();
+  speechRecognition.lang = preferences.language === "en" ? "en-US" : "ar-EG";
+  speechRecognition.continuous = true;
+  speechRecognition.interimResults = true;
+  speechBaseText = input.value.trim();
+
+  speechRecognition.onstart = () => {
+    isRecording = true;
+    micBtn.classList.add("recording");
+    micBtn.setAttribute("aria-pressed", "true");
+    micBtn.title = preferences.language === "en" ? "Stop recording" : "إيقاف التسجيل";
+    micStatus.textContent = preferences.language === "en" ? "Listening… speak now" : "جاري الاستماع… اتكلم دلوقتي";
+  };
+
+  speechRecognition.onresult = event => {
+    let transcript = "";
+    for (let i = 0; i < event.results.length; i++) {
+      transcript += event.results[i][0].transcript;
+    }
+    input.value = [speechBaseText, transcript.trim()].filter(Boolean).join(speechBaseText ? " " : "");
+    input.style.height = "auto";
+    input.style.height = Math.min(input.scrollHeight, 180) + "px";
+  };
+
+  speechRecognition.onerror = event => {
+    const messages = {
+      "not-allowed": preferences.language === "en" ? "Microphone permission was blocked. Allow it in your browser." : "إذن الميكروفون مرفوض. اسمح للمتصفح باستخدامه.",
+      "no-speech": preferences.language === "en" ? "No speech was detected. Try again." : "لم يتم التقاط كلام. حاول مرة أخرى.",
+      "audio-capture": preferences.language === "en" ? "No microphone was found." : "لم يتم العثور على ميكروفون.",
+      "network": preferences.language === "en" ? "Speech recognition network error. Try again." : "حدث خطأ في اتصال خدمة تحويل الصوت إلى نص. حاول مرة أخرى."
+    };
+    micStatus.textContent = messages[event.error] || (preferences.language === "en" ? "Voice input error. Try again." : "حصل خطأ في التسجيل الصوتي. حاول مرة أخرى.");
+  };
+
+  speechRecognition.onend = () => {
+    isRecording = false;
+    micBtn.classList.remove("recording");
+    micBtn.setAttribute("aria-pressed", "false");
+    micBtn.title = preferences.language === "en" ? "Voice input" : "تسجيل صوتي";
+    if (!micStatus.textContent.includes("مرفوض") && !micStatus.textContent.includes("خطأ") &&
+        !micStatus.textContent.includes("لم يتم") && !micStatus.textContent.includes("blocked") &&
+        !micStatus.textContent.includes("error") && !micStatus.textContent.includes("found")) {
+      micStatus.textContent = preferences.language === "en" ? "Recording stopped. Review the text before sending." : "انتهى التسجيل. راجع النص قبل الإرسال.";
+    }
+  };
+
+  try {
+    micStatus.textContent = "";
+    speechRecognition.start();
+  } catch (error) {
+    micStatus.textContent = preferences.language === "en" ? "Could not start the microphone. Try again." : "تعذر بدء الميكروفون. حاول مرة أخرى.";
   }
 });
 
