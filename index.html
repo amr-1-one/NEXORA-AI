@@ -56,7 +56,8 @@
             <span class="model-tag">AI Assistant</span>
           </div>
         </div>
-        <button class="clear-btn" id="clearChat">مسح المحادثة</button>
+        <div class="topbar-actions"><button class="settings-open-btn" id="settingsOpen" type="button" aria-label="الإعدادات">⚙️ الإعدادات</button>
+        <button class="clear-btn" id="clearChat">مسح المحادثة</button></div>
       </header>
 
       <section class="conversation" id="conversation">
@@ -114,6 +115,25 @@
 
       <p class="auth-message" id="authMessage"></p>
     </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="settingsModal">
+    <section class="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <button class="modal-close" id="settingsClose" type="button" aria-label="إغلاق">×</button>
+      <div class="settings-heading"><div class="modal-brand">⚙</div><div><h2 id="settingsTitle">إعدادات NEXORA</h2><p class="modal-subtitle">خصص تجربتك واحفظ تفضيلاتك.</p></div></div>
+      <form id="settingsForm">
+        <label for="settingsName">اسم العرض</label>
+        <input id="settingsName" type="text" maxlength="40" placeholder="اكتب اسمك">
+        <label for="settingsLanguage">لغة الواجهة</label>
+        <select id="settingsLanguage"><option value="ar">العربية</option><option value="en">English</option></select>
+        <label for="settingsTheme">المظهر</label>
+        <select id="settingsTheme"><option value="light">فاتح / Light</option><option value="dark">داكن / Dark</option></select>
+        <label for="settingsColor">اللون الأساسي</label>
+        <div class="color-setting"><input id="settingsColor" type="color" value="#7455e8"><span>اختر اللون الذي تفضله</span></div>
+        <p class="settings-note" id="settingsMessage">يتم حفظ الإعدادات في حسابك عند تسجيل الدخول.</p>
+        <div class="settings-actions"><button type="button" class="settings-cancel" id="settingsCancel">إلغاء</button><button type="submit" class="auth-submit" id="settingsSave">حفظ الإعدادات</button></div>
+      </form>
+    </section>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
