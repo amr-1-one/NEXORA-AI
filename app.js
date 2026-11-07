@@ -36,7 +36,6 @@ let speechRecognition = null;
 let isRecording = false;
 let speechHadError = false;
 let speechBaseText = "";
-let speechFinalTranscript = "";
 
 function setAuthMessage(message, isError = false) {
   authMessage.textContent = message;
@@ -534,7 +533,6 @@ micBtn.addEventListener("click", () => {
   speechRecognition.continuous = true;
   speechRecognition.interimResults = true;
   speechBaseText = input.value.trim();
-  speechFinalTranscript = "";
 
   speechRecognition.onstart = () => {
     speechHadError = false;
@@ -546,22 +544,20 @@ micBtn.addEventListener("click", () => {
   };
 
   speechRecognition.onresult = event => {
-    let interimTranscript = "";
+    // The results list already contains the complete transcript for this session.
+    // Rebuild it on every event instead of appending, which can duplicate long phrases.
+    const finalParts = [];
+    const interimParts = [];
 
-    // Process only new/updated results to avoid adding the same words twice.
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      const result = event.results[i];
-      const phrase = result[0].transcript.trim();
+    for (let i = 0; i < event.results.length; i++) {
+      const phrase = event.results[i][0].transcript.trim();
       if (!phrase) continue;
 
-      if (result.isFinal) {
-        speechFinalTranscript = [speechFinalTranscript, phrase].filter(Boolean).join(" ");
-      } else {
-        interimTranscript = [interimTranscript, phrase].filter(Boolean).join(" ");
-      }
+      if (event.results[i].isFinal) finalParts.push(phrase);
+      else interimParts.push(phrase);
     }
 
-    const spokenText = [speechFinalTranscript, interimTranscript].filter(Boolean).join(" ");
+    const spokenText = [...finalParts, ...interimParts].join(" ");
     input.value = [speechBaseText, spokenText].filter(Boolean).join(speechBaseText ? " " : "");
     input.style.height = "auto";
     input.style.height = Math.min(input.scrollHeight, 180) + "px";
