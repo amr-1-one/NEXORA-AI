@@ -648,3 +648,56 @@ textarea::placeholder {
   font-size: 10px;
   letter-spacing: .1px;
 }
+
+
+/* NEXORA preferences */
+.topbar-actions { display:flex; align-items:center; gap:8px; }
+.settings-open-btn {
+  border:1px solid var(--border); background:white; color:var(--text);
+  border-radius:9px; padding:7px 12px; font-size:12px;
+}
+.settings-open-btn:hover { background:var(--purple-light); border-color:var(--purple); }
+.settings-modal {
+  position:relative; width:min(460px,100%); max-height:90vh; overflow:auto;
+  background:white; border:1px solid #eeeaf8; border-radius:22px;
+  padding:28px; box-shadow:0 25px 80px #17132b22;
+}
+.settings-heading { display:flex; align-items:center; gap:13px; margin-bottom:18px; }
+.settings-heading h2 { margin:0 0 3px; font-size:20px; }
+.settings-heading .modal-subtitle { margin:0; }
+.settings-modal label { display:block; margin:14px 0 6px; font-size:12px; color:#555; }
+.settings-modal input[type="text"], .settings-modal select {
+  width:100%; border:1px solid #e6e3ef; border-radius:10px; padding:11px;
+  background:white; color:#303044; outline:0;
+}
+.settings-modal input:focus, .settings-modal select:focus { border-color:var(--purple); }
+.color-setting { display:flex; align-items:center; gap:12px; color:var(--muted); font-size:12px; }
+.color-setting input { width:52px; height:38px; border:0; background:transparent; cursor:pointer; }
+.settings-note { color:var(--muted); font-size:11px; line-height:1.7; }
+.settings-actions { display:flex; gap:9px; align-items:center; }
+.settings-actions .auth-submit { flex:1; margin-top:8px; }
+.settings-cancel { border:1px solid var(--border); background:white; border-radius:10px; padding:11px 18px; margin-top:8px; }
+:root[data-theme="dark"] body, :root[data-theme="dark"] .main { background:#171722; color:#f2f0fa; }
+:root[data-theme="dark"] .sidebar { background:#20202d; border-color:#343444; }
+:root[data-theme="dark"] .topbar { background:#1c1c29; border-color:#343444; }
+:root[data-theme="dark"] .brand b, :root[data-theme="dark"] .model-name,
+:root[data-theme="dark"] .welcome h1, :root[data-theme="dark"] .bubble { color:#f2f0fa; }
+:root[data-theme="dark"] .suggestion, :root[data-theme="dark"] .new-chat,
+:root[data-theme="dark"] .settings-open-btn, :root[data-theme="dark"] .clear-btn,
+:root[data-theme="dark"] .composer, :root[data-theme="dark"] .auth-side-btn,
+:root[data-theme="dark"] .settings-cancel { background:#292938; color:#eeeafa; border-color:#3b3b4d; }
+:root[data-theme="dark"] .bubble { background:#292938; border-color:#39394b; }
+:root[data-theme="dark"] .user .bubble { background:#352d53; color:#f5f0ff; }
+:root[data-theme="dark"] .history-item { color:#d0cde0; }
+:root[data-theme="dark"] .history-item:hover { background:#343047; }
+:root[data-theme="dark"] textarea { color:#f2f0fa; }
+:root[data-theme="dark"] .auth-modal, :root[data-theme="dark"] .settings-modal { background:#222230; color:#f2f0fa; border-color:#3b3b4d; }
+:root[data-theme="dark"] .settings-modal input[type="text"],
+:root[data-theme="dark"] .settings-modal select { background:#292938; color:#f2f0fa; border-color:#414154; }
+:root[data-theme="dark"] .auth-modal input { background:#292938; color:#f2f0fa; border-color:#414154; }
+:root[data-theme="dark"] .auth-modal label, :root[data-theme="dark"] .settings-modal label { color:#dedbea; }
+:root[data-theme="dark"] .composer { box-shadow:none; }
+@media(max-width:760px) {
+  .topbar-actions { gap:5px; }
+  .settings-open-btn { padding:7px 8px; font-size:10px; }
+}
