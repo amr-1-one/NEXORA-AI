@@ -513,7 +513,33 @@ input.addEventListener("keydown", event => {
   }
 });
 
-// Voice input: browser speech recognition converts speech into editable text.
+// Voice input: keep each SpeechRecognition result by its stable index.
+// This prevents Chrome's repeated onresult events from appending the same words again.
+let speechFinalParts = [];
+let speechInterimParts = [];
+
+function normalizeSpeechPart(value) {
+  return (value || "").replace(/\\s+/g, " ").trim();
+}
+
+function renderSpeechTranscript() {
+  const parts = [];
+  const count = Math.max(speechFinalParts.length, speechInterimParts.length);
+  for (let i = 0; i < count; i++) {
+    const part = normalizeSpeechPart(speechFinalParts[i] || speechInterimParts[i] || "");
+    if (!part) continue;
+    const previous = parts[parts.length - 1];
+    // Ignore an identical adjacent segment if the browser reports it twice.
+    if (previous && previous.replace(/[.,!?؟،؛:]+$/g, "") === part.replace(/[.,!?؟،؛:]+$/g, "")) continue;
+    parts.push(part);
+  }
+
+  const spokenText = parts.join(" ");
+  input.value = [speechBaseText, spokenText].filter(Boolean).join(speechBaseText ? " " : "");
+  input.style.height = "auto";
+  input.style.height = Math.min(input.scrollHeight, 180) + "px";
+}
+
 micBtn.addEventListener("click", () => {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
@@ -533,6 +559,8 @@ micBtn.addEventListener("click", () => {
   speechRecognition.continuous = true;
   speechRecognition.interimResults = true;
   speechBaseText = input.value.trim();
+  speechFinalParts = [];
+  speechInterimParts = [];
 
   speechRecognition.onstart = () => {
     speechHadError = false;
@@ -544,23 +572,19 @@ micBtn.addEventListener("click", () => {
   };
 
   speechRecognition.onresult = event => {
-    // The results list already contains the complete transcript for this session.
-    // Rebuild it on every event instead of appending, which can duplicate long phrases.
-    const finalParts = [];
-    const interimParts = [];
-
-    for (let i = 0; i < event.results.length; i++) {
-      const phrase = event.results[i][0].transcript.trim();
-      if (!phrase) continue;
-
-      if (event.results[i].isFinal) finalParts.push(phrase);
-      else interimParts.push(phrase);
+    // Update only the changed result slots. Never concatenate the full results
+    // array on every event, because Chrome sends previous results again.
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const result = event.results[i];
+      const phrase = normalizeSpeechPart(result[0]?.transcript || "");
+      if (result.isFinal) {
+        speechFinalParts[i] = phrase;
+        speechInterimParts[i] = "";
+      } else {
+        speechInterimParts[i] = phrase;
+      }
     }
-
-    const spokenText = [...finalParts, ...interimParts].join(" ");
-    input.value = [speechBaseText, spokenText].filter(Boolean).join(speechBaseText ? " " : "");
-    input.style.height = "auto";
-    input.style.height = Math.min(input.scrollHeight, 180) + "px";
+    renderSpeechTranscript();
   };
 
   speechRecognition.onerror = event => {
