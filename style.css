@@ -640,3 +640,11 @@ textarea::placeholder {
   opacity: .55;
   cursor: wait;
 }
+
+.copyright {
+  margin: 7px 0 10px;
+  text-align: center;
+  color: #9993aa;
+  font-size: 10px;
+  letter-spacing: .1px;
+}
