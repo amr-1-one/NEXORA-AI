@@ -34,6 +34,7 @@ let currentUser = null;
 let authMode = "login";
 let speechRecognition = null;
 let isRecording = false;
+let speechHadError = false;
 let speechBaseText = "";
 
 function setAuthMessage(message, isError = false) {
@@ -125,6 +126,12 @@ function applyPreferences() {
   if (currentUser && preferences.name) nameEl.textContent = preferences.name;
   const saveButton = document.getElementById("settingsSave");
   if (saveButton) saveButton.textContent = isEnglish ? "Save settings" : "حفظ الإعدادات";
+  const voiceButton = document.getElementById("micBtn");
+  if (voiceButton) {
+    const voiceLabel = isEnglish ? (isRecording ? "Stop recording" : "Voice input") : (isRecording ? "إيقاف التسجيل" : "تسجيل صوتي");
+    voiceButton.title = voiceLabel;
+    voiceButton.setAttribute("aria-label", voiceLabel);
+  }
 }
 
 function loadLocalPreferences() {
@@ -528,6 +535,7 @@ micBtn.addEventListener("click", () => {
   speechBaseText = input.value.trim();
 
   speechRecognition.onstart = () => {
+    speechHadError = false;
     isRecording = true;
     micBtn.classList.add("recording");
     micBtn.setAttribute("aria-pressed", "true");
@@ -546,6 +554,7 @@ micBtn.addEventListener("click", () => {
   };
 
   speechRecognition.onerror = event => {
+    speechHadError = true;
     const messages = {
       "not-allowed": preferences.language === "en" ? "Microphone permission was blocked. Allow it in your browser." : "إذن الميكروفون مرفوض. اسمح للمتصفح باستخدامه.",
       "no-speech": preferences.language === "en" ? "No speech was detected. Try again." : "لم يتم التقاط كلام. حاول مرة أخرى.",
@@ -560,9 +569,7 @@ micBtn.addEventListener("click", () => {
     micBtn.classList.remove("recording");
     micBtn.setAttribute("aria-pressed", "false");
     micBtn.title = preferences.language === "en" ? "Voice input" : "تسجيل صوتي";
-    if (!micStatus.textContent.includes("مرفوض") && !micStatus.textContent.includes("خطأ") &&
-        !micStatus.textContent.includes("لم يتم") && !micStatus.textContent.includes("blocked") &&
-        !micStatus.textContent.includes("error") && !micStatus.textContent.includes("found")) {
+    if (!speechHadError) {
       micStatus.textContent = preferences.language === "en" ? "Recording stopped. Review the text before sending." : "انتهى التسجيل. راجع النص قبل الإرسال.";
     }
   };
