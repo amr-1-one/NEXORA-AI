@@ -701,3 +701,51 @@ textarea::placeholder {
   .topbar-actions { gap:5px; }
   .settings-open-btn { padding:7px 8px; font-size:10px; }
 }
+
+
+/* Voice input button */
+.mic-btn {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: #f8f6ff;
+  color: var(--purple-dark);
+  font-size: 19px;
+  display: grid;
+  place-items: center;
+  transition: .2s;
+}
+.mic-btn:hover {
+  background: var(--purple-light);
+  border-color: var(--purple);
+}
+.mic-btn.recording {
+  background: #ffe9ed;
+  border-color: #e45c73;
+  color: #c52d4b;
+  animation: mic-pulse 1.2s infinite;
+}
+.mic-status {
+  min-height: 0;
+  padding: 0 8px;
+  text-align: center;
+  color: var(--purple-dark);
+  font-size: 11px;
+}
+.mic-status:not(:empty) { padding-top: 7px; }
+@keyframes mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 #e45c7340; }
+  50% { box-shadow: 0 0 0 6px #e45c7300; }
+}
+:root[data-theme="dark"] .mic-btn {
+  background: #292938;
+  color: #eeeafa;
+  border-color: #3b3b4d;
+}
+:root[data-theme="dark"] .mic-btn.recording {
+  background: #482b38;
+  color: #ff9daf;
+  border-color: #a94b61;
+}
