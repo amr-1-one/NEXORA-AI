@@ -749,3 +749,35 @@ textarea::placeholder {
   color: #ff9daf;
   border-color: #a94b61;
 }
+
+
+/* Conversation history delete controls */
+.history-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.history-row .history-item {
+  flex: 1;
+  min-width: 0;
+}
+.history-delete {
+  flex: 0 0 30px;
+  width: 30px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #b2aebe;
+  font-size: 20px;
+  line-height: 1;
+  opacity: .65;
+}
+.history-delete:hover {
+  background: #fff0f2;
+  color: #d34b62;
+  opacity: 1;
+}
+:root[data-theme="dark"] .history-delete { color: #c8c2d7; }
+:root[data-theme="dark"] .history-delete:hover { background: #482b38; color: #ff9daf; }
