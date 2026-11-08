@@ -468,9 +468,17 @@ async function sendMessage(text) {
   scrollToBottom();
 
   try {
+    // Attach the current Supabase access token so the Worker can verify
+    // the sender. Never send a user_id supplied by the browser.
+    const { data: sessionData } = await supabaseClient.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+
     const response = await fetch(API_URL + "/api/chat", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(accessToken ? { "Authorization": "Bearer " + accessToken } : {})
+      },
       body: JSON.stringify({
         messages: messages.slice(-12).map(message => ({
           role: message.role === "assistant" ? "model" : "user",
@@ -485,6 +493,11 @@ async function sendMessage(text) {
 
     waiting.remove();
     await typeAssistantMessage(data.reply);
+
+    // The Worker may return a warning after recording a moderation event.
+    if (typeof data.moderationWarning === "string" && data.moderationWarning.trim()) {
+      alert(data.moderationWarning);
+    }
   } catch (error) {
     waiting.remove();
     addMessage("assistant", "حدث خطأ: " + error.message + "\nتأكد من اتصال الخادم وإعدادات Gemini.");
