@@ -305,13 +305,54 @@ async function persistCurrent() {
   }
 }
 
+async function deleteConversation(chatId) {
+  if (isTyping) return;
+  const chat = conversations.find(item => item.id === chatId);
+  if (!chat) return;
+
+  const isEnglish = preferences.language === "en";
+  const confirmed = confirm(isEnglish
+    ? "Permanently delete this conversation?"
+    : "هل تريد حذف هذه المحادثة نهائيًا؟");
+  if (!confirmed) return;
+
+  if (currentUser) {
+    const { error } = await supabaseClient
+      .from("nexora_chats")
+      .delete()
+      .eq("id", chatId)
+      .eq("user_id", currentUser.id);
+
+    if (error) {
+      console.error("Delete chat error:", error);
+      alert((isEnglish ? "Could not delete conversation: " : "تعذّر حذف المحادثة: ") + error.message);
+      return;
+    }
+  }
+
+  conversations = conversations.filter(item => item.id !== chatId);
+  if (!currentUser) saveGuestChats();
+
+  if (activeChatId === chatId) {
+    activeChatId = null;
+    messages = [];
+    renderMessages();
+  }
+
+  renderHistory();
+}
+
 function renderHistory() {
   historyEl.innerHTML = "";
 
   conversations.forEach(chat => {
+    const row = document.createElement("div");
+    row.className = "history-row";
+
     const button = document.createElement("button");
     button.className = "history-item";
     button.textContent = chat.title || "محادثة جديدة";
+    button.type = "button";
 
     if (chat.id === activeChatId) button.classList.add("active");
 
@@ -320,10 +361,20 @@ function renderHistory() {
       activeChatId = chat.id;
       messages = [...(chat.messages || [])];
       renderMessages();
+      renderHistory();
       document.querySelector(".sidebar").classList.remove("open");
     });
 
-    historyEl.appendChild(button);
+    const deleteButton = document.createElement("button");
+    deleteButton.className = "history-delete";
+    deleteButton.type = "button";
+    deleteButton.textContent = "×";
+    deleteButton.title = preferences.language === "en" ? "Delete conversation" : "حذف المحادثة";
+    deleteButton.setAttribute("aria-label", deleteButton.title);
+    deleteButton.addEventListener("click", () => deleteConversation(chat.id));
+
+    row.append(button, deleteButton);
+    historyEl.appendChild(row);
   });
 }
 
@@ -643,13 +694,15 @@ document.getElementById("newChat").addEventListener("click", () => {
 });
 
 document.getElementById("clearChat").addEventListener("click", () => {
-  if (!messages.length || isTyping) return;
-
-  if (confirm("تمسح المحادثة الحالية من الشاشة؟")) {
+  if (isTyping) return;
+  if (activeChatId) {
+    deleteConversation(activeChatId);
+    return;
+  }
+  if (!messages.length) return;
+  if (confirm(preferences.language === "en" ? "Clear this unsaved conversation?" : "تمسح المحادثة الحالية غير المحفوظة؟")) {
     messages = [];
-    activeChatId = null;
     renderMessages();
-    renderHistory();
   }
 });
 
