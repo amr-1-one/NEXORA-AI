@@ -860,3 +860,44 @@ async function initializeApp() {
 }
 
 initializeApp();
+
+
+// PWA install prompt (kept separate from chat/auth logic).
+(() => {
+  const installButton = document.getElementById("installAppBtn");
+  if (!installButton) return;
+
+  let installPrompt = null;
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true;
+
+  if (isStandalone) {
+    installButton.hidden = true;
+    return;
+  }
+
+  installButton.hidden = false;
+
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    installPrompt = event;
+    installButton.hidden = false;
+  });
+
+  installButton.addEventListener("click", async () => {
+    if (!installPrompt) {
+      alert("لتثبيت NEXORA AI: افتح قائمة المتصفح ثم اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».");
+      return;
+    }
+
+    installPrompt.prompt();
+    await installPrompt.userChoice;
+    installPrompt = null;
+    installButton.hidden = true;
+  });
+
+  window.addEventListener("appinstalled", () => {
+    installPrompt = null;
+    installButton.hidden = true;
+  });
+})();
