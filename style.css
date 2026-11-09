@@ -816,3 +816,41 @@ textarea::placeholder {
   text-align: center;
   font-size: 12px;
 }
+
+
+/* Google sign-in button */
+.google-auth-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  margin-top: 11px;
+  padding: 11px 14px;
+  border: 1px solid #dedde5;
+  border-radius: 11px;
+  background: #fff;
+  color: #30303b;
+  font-size: 13px;
+  font-weight: 700;
+  transition: background .2s, border-color .2s;
+}
+.google-auth-btn:hover {
+  background: #f8f8fb;
+  border-color: #b9b6c5;
+}
+.google-auth-btn:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+.google-g {
+  font-family: Arial, sans-serif;
+  font-size: 19px;
+  font-weight: 800;
+  color: #4285f4;
+}
+:root[data-theme="dark"] .google-auth-btn {
+  background: #292938;
+  color: #f2f0fa;
+  border-color: #414154;
+}
