@@ -781,3 +781,28 @@ textarea::placeholder {
 }
 :root[data-theme="dark"] .history-delete { color: #c8c2d7; }
 :root[data-theme="dark"] .history-delete:hover { background: #482b38; color: #ff9daf; }
+
+
+/* PWA install button */
+.install-app-btn {
+  border: 1px solid #e5dfff;
+  background: var(--purple-light);
+  color: var(--purple-dark);
+  border-radius: 9px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.install-app-btn:hover {
+  border-color: var(--purple);
+  filter: brightness(.98);
+}
+.install-app-btn[hidden] { display: none !important; }
+:root[data-theme="dark"] .install-app-btn {
+  background: #292938;
+  color: #eeeafa;
+  border-color: #3b3b4d;
+}
+@media(max-width:760px) {
+  .install-app-btn { padding: 7px 8px; font-size: 10px; }
+}
