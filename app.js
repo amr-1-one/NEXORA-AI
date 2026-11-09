@@ -66,7 +66,7 @@ function setAuthMode(mode) {
 }
 
 
-const defaultPreferences = { name: "", language: "ar", theme: "light", color: "#7455e8" };
+const defaultPreferences = { name: "", language: "ar", theme: "light", color: "#7455e8", responseLength: "balanced" };
 let preferences = { ...defaultPreferences };
 
 function validHexColor(value) {
@@ -95,6 +95,7 @@ function applyPreferences() {
     "#settingsOpen": "⚙️ Settings", "#settingsTitle": "NEXORA Settings",
     'label[for="settingsName"]': "Display name", 'label[for="settingsLanguage"]': "Interface language",
     'label[for="settingsTheme"]': "Appearance", 'label[for="settingsColor"]': "Accent color",
+    'label[for="settingsResponseLength"]': "Response length",
     "#settingsSave": "Save settings", "#settingsCancel": "Cancel",
     "#settingsClose": "×"
   } : {
@@ -108,6 +109,7 @@ function applyPreferences() {
     "#settingsOpen": "⚙️ الإعدادات", "#settingsTitle": "إعدادات NEXORA",
     'label[for="settingsName"]': "اسم العرض", 'label[for="settingsLanguage"]': "لغة الواجهة",
     'label[for="settingsTheme"]': "المظهر", 'label[for="settingsColor"]': "اللون الأساسي",
+    'label[for="settingsResponseLength"]': "طول الردود",
     "#settingsSave": "حفظ الإعدادات", "#settingsCancel": "إلغاء",
     "#settingsClose": "×"
   };
@@ -125,6 +127,11 @@ function applyPreferences() {
   });
   const nameEl = document.getElementById("profileName");
   if (currentUser && preferences.name) nameEl.textContent = preferences.name;
+  const responseLengthSelect = document.getElementById("settingsResponseLength");
+  if (responseLengthSelect) {
+    const labels = isEnglish ? { concise: "Concise", balanced: "Balanced", detailed: "Detailed" } : { concise: "مختصر", balanced: "متوازن", detailed: "تفصيلي" };
+    [...responseLengthSelect.options].forEach(option => { option.textContent = labels[option.value] || option.textContent; });
+  }
   const saveButton = document.getElementById("settingsSave");
   if (saveButton) saveButton.textContent = isEnglish ? "Save settings" : "حفظ الإعدادات";
   const voiceButton = document.getElementById("micBtn");
@@ -154,6 +161,7 @@ async function loadPreferences() {
   if (!["ar", "en"].includes(preferences.language)) preferences.language = "ar";
   if (!["light", "dark"].includes(preferences.theme)) preferences.theme = "light";
   if (!validHexColor(preferences.color)) preferences.color = defaultPreferences.color;
+  if (!["concise", "balanced", "detailed"].includes(preferences.responseLength)) preferences.responseLength = "balanced";
   applyPreferences();
 }
 
@@ -164,7 +172,8 @@ async function savePreferences(event) {
     name,
     language: document.getElementById("settingsLanguage").value,
     theme: document.getElementById("settingsTheme").value,
-    color: document.getElementById("settingsColor").value
+    color: document.getElementById("settingsColor").value,
+    responseLength: document.getElementById("settingsResponseLength").value
   };
   applyPreferences();
   const message = document.getElementById("settingsMessage");
@@ -198,6 +207,7 @@ function openSettings() {
   document.getElementById("settingsLanguage").value = preferences.language;
   document.getElementById("settingsTheme").value = preferences.theme;
   document.getElementById("settingsColor").value = preferences.color;
+  document.getElementById("settingsResponseLength").value = preferences.responseLength || "balanced";
   document.getElementById("settingsMessage").textContent = currentUser
     ? (preferences.language === "en" ? "Your settings sync with your account." : "إعداداتك متزامنة مع حسابك.")
     : (preferences.language === "en" ? "Guest settings are saved on this device only." : "إعدادات الزائر تُحفظ على هذا الجهاز فقط.");
@@ -476,6 +486,21 @@ function typeAssistantMessage(text) {
   });
 }
 
+function getResponseLengthInstruction() {
+  const instructions = {
+    concise: preferences.language === "en"
+      ? "Response style preference: answer concisely and directly, focusing on the essential points. Keep necessary context and safety details."
+      : "تفضيل أسلوب الرد: أجب باختصار ووضوح وركّز على النقاط الأساسية، مع عدم حذف المعلومات الضرورية أو تنبيهات السلامة.",
+    detailed: preferences.language === "en"
+      ? "Response style preference: provide a detailed, well-organized explanation with useful context and examples when they help."
+      : "تفضيل أسلوب الرد: قدّم شرحًا تفصيليًا ومنظمًا، وأضف السياق والأمثلة المفيدة عند الحاجة.",
+    balanced: preferences.language === "en"
+      ? "Response style preference: use a balanced, natural level of detail. Be clear and avoid unnecessary repetition."
+      : "تفضيل أسلوب الرد: استخدم طولًا متوازنًا وطبيعيًا، وكن واضحًا وتجنب التكرار غير الضروري."
+  };
+  return instructions[preferences.responseLength] || instructions.balanced;
+}
+
 async function sendMessage(text) {
   const clean = text.trim();
   if (!clean || sendBtn.disabled || isTyping) return;
@@ -532,9 +557,11 @@ async function sendMessage(text) {
         ...(accessToken ? { "Authorization": "Bearer " + accessToken } : {})
       },
       body: JSON.stringify({
-        messages: messages.slice(-12).map(message => ({
+        messages: messages.slice(-12).map((message, index, recentMessages) => ({
           role: message.role === "assistant" ? "model" : "user",
-          text: message.text
+          text: message.text + (index === recentMessages.length - 1 && message.role !== "assistant"
+            ? "\n\n" + getResponseLengthInstruction()
+            : "")
         }))
       })
     });
