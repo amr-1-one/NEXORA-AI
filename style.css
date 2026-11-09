@@ -806,3 +806,13 @@ textarea::placeholder {
 @media(max-width:760px) {
   .install-app-btn { padding: 7px 8px; font-size: 10px; }
 }
+
+
+/* Keep the PWA install action in the sidebar, below New Chat. */
+.sidebar .install-app-btn {
+  width: 100%;
+  margin-top: 9px;
+  padding: 10px 12px;
+  text-align: center;
+  font-size: 12px;
+}
