@@ -1,0 +1,23 @@
+{
+  "id": "./",
+  "name": "NEXORA AI",
+  "short_name": "NEXORA",
+  "description": "مساعدك الذكي للتعلم والبرمجة والكتابة والإبداع.",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "./icons/nexora-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
