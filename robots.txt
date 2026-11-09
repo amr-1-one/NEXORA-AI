@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://amr-1-one.github.io/NEXORA-AI/sitemap.xml
