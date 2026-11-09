@@ -21,6 +21,7 @@ const authPassword = document.getElementById("authPassword");
 const authMessage = document.getElementById("authMessage");
 const authTitle = document.getElementById("authTitle");
 const authSubmit = document.getElementById("authSubmit");
+const googleLoginBtn = document.getElementById("googleLoginBtn");
 const loginTab = document.getElementById("loginTab");
 const signupTab = document.getElementById("signupTab");
 const authOpen = document.getElementById("authOpen");
@@ -742,6 +743,23 @@ resetPasswordBtn.addEventListener("click", async () => {
     setAuthMessage(error.message || "تعذّر إرسال رابط الاستعادة.", true);
   } finally {
     resetPasswordBtn.disabled = false;
+  }
+});
+
+googleLoginBtn.addEventListener("click", async () => {
+  googleLoginBtn.disabled = true;
+  setAuthMessage("جارٍ تحويلك إلى Google...");
+  try {
+    const { error } = await supabaseClient.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: "https://amr-1-one.github.io/NEXORA-AI/"
+      }
+    });
+    if (error) throw error;
+  } catch (error) {
+    setAuthMessage(error.message || "تعذّر بدء تسجيل الدخول باستخدام Google.", true);
+    googleLoginBtn.disabled = false;
   }
 });
 
