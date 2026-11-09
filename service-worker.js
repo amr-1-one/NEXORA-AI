@@ -7,9 +7,7 @@ const APP_FILES = [
   "./style.css",
   "./manifest.json",
   "./favicon.svg",
-  "./icons/nexora-icon.svg",
-  "./icons/nexora-192.png",
-  "./icons/nexora-512.png"
+  "./icons/nexora-icon.svg"
 ].map((path) => new URL(path, APP_ROOT).href);
 
 self.addEventListener("install", (event) => {
