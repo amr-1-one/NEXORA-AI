@@ -506,11 +506,17 @@ function speakAssistantMessage(message, button) {
     utterance.pitch = 1;
 
     const voices = window.speechSynthesis.getVoices();
-    const voice = voices.find(v => v.lang.toLowerCase() === lang.toLowerCase())
-      || voices.find(v => v.lang.toLowerCase().startsWith(isArabic ? "ar-" : "en-"));
-    // If no matching Arabic voice is installed, let the browser choose its default
-    // instead of silently stopping the whole playback.
-    if (voice) utterance.voice = voice;
+    // Some devices report Arabic as "ar" (without a region such as "ar-EG").
+    // Match both "ar" and regional tags like "ar-SA" or "ar-EG".
+    const voice = isArabic
+      ? (voices.find(v => /^ar-eg$/i.test(v.lang))
+        || voices.find(v => /^ar(?:-|$)/i.test(v.lang)))
+      : (voices.find(v => v.lang.toLowerCase() === lang.toLowerCase())
+        || voices.find(v => /^en(?:-|$)/i.test(v.lang)));
+    if (voice) {
+      utterance.voice = voice;
+      utterance.lang = voice.lang;
+    }
 
     utterance.onstart = () => { started = true; };
     utterance.onend = () => {
