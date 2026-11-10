@@ -506,9 +506,22 @@ async function speakAssistantMessage(message, button) {
   };
 
   try {
+    // TTS is available to signed-in users only. The Worker verifies this token.
+    const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError) throw sessionError;
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      throw new Error(preferences.language === "en"
+        ? "Sign in to use voice reading."
+        : "سجّل الدخول أولًا لاستخدام القراءة الصوتية.");
+    }
+
     const response = await fetch(API_URL + "/api/tts", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + accessToken
+      },
       body: JSON.stringify({ text: textToRead })
     });
 
