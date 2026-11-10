@@ -1227,3 +1227,26 @@ body { font-size: 14px; }
 :root[data-theme="dark"] .create-folder-btn{color:#d4c9ff;border-color:#51466f}
 :root[data-theme="dark"] .history-action{color:#c8c2d7}
 @media(max-width:760px){.history-action{width:27px}.history-actions{gap:1px}}
+
+
+/* NEXORA cross-chat memory */
+.memory-open-btn{width:100%;border:1px solid #e3dcfb;background:#f8f6ff;color:var(--purple-dark);border-radius:9px;padding:9px;font-size:11px;text-align:center}
+.memory-open-btn:hover{background:var(--purple-light);border-color:var(--purple)}
+.memory-modal{max-height:88vh}
+.memory-add-row{display:flex;gap:8px;margin:16px 0 12px}
+.memory-add-row input{flex:1;min-width:0;border:1px solid var(--border);border-radius:10px;padding:10px;background:var(--surface,#fff);color:var(--text);font:inherit;font-size:12px}
+.memory-add-row button{border:0;border-radius:10px;padding:0 16px;background:var(--purple);color:#fff;font:inherit;font-size:12px}
+.memory-list{display:flex;flex-direction:column;gap:7px;max-height:36vh;overflow:auto}
+.memory-item{display:flex;align-items:center;gap:9px;border:1px solid var(--border);border-radius:10px;padding:9px 10px;font-size:12px}
+.memory-item span{flex:1;min-width:0;overflow-wrap:anywhere}
+.memory-remove-btn{width:26px;height:26px;border:0;border-radius:7px;background:transparent;color:#c34c61;font-size:19px}
+.memory-remove-btn:hover{background:#fff0f2}
+.memory-empty{padding:18px 8px;text-align:center;color:var(--muted);font-size:12px;line-height:1.8}
+.memory-footer{margin-top:14px}
+.memory-footer .settings-note{margin-bottom:10px}
+.memory-clear-btn{border:1px solid #f0cbd1;border-radius:9px;background:#fff8f9;color:#b33b50;padding:8px 11px;font-size:11px}
+:root[data-theme="dark"] .memory-open-btn{background:#292938;color:#e4dcff;border-color:#414154}
+:root[data-theme="dark"] .memory-add-row input{background:#292938;color:#f2f0fa;border-color:#414154}
+:root[data-theme="dark"] .memory-item{border-color:#414154}
+:root[data-theme="dark"] .memory-clear-btn{background:#38252c;color:#ffb7c2;border-color:#70404b}
+@media(max-width:760px){.memory-modal{padding:22px 17px}.memory-add-row{gap:6px}.memory-add-row button{padding:0 12px}}
