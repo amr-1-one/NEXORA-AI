@@ -1018,3 +1018,93 @@ body { font-size: 14px; }
     max-height: 420px;
   }
 }
+
+
+/* Assistant answer actions and standalone code blocks */
+.assistant .bubble { white-space: normal; }
+.assistant-prose { white-space: pre-wrap; overflow-wrap: anywhere; }
+.assistant-message-actions {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 9px;
+}
+.message-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 29px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface, #fff);
+  color: var(--muted);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  transition: .18s ease;
+}
+.message-copy-btn:hover {
+  color: var(--purple-dark);
+  border-color: var(--purple);
+  background: var(--purple-light);
+}
+.code-block {
+  width: 100%;
+  max-width: 100%;
+  margin: 12px 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: #171923;
+  color: #f4f4f7;
+  direction: ltr;
+  text-align: left;
+}
+.code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 10px;
+  border-bottom: 1px solid #ffffff20;
+  background: #222532;
+  color: #c9cbd5;
+  font: 11px/1.4 Inter, sans-serif;
+}
+.code-block .message-copy-btn {
+  min-height: 25px;
+  padding: 3px 8px;
+  border-color: #ffffff30;
+  background: #303444;
+  color: #f4f4f7;
+}
+.code-block .message-copy-btn:hover {
+  background: #41485c;
+  border-color: #aaa2ff;
+}
+.code-block pre {
+  max-width: 100%;
+  margin: 0;
+  padding: 13px;
+  overflow-x: auto;
+  white-space: pre;
+  direction: ltr;
+  text-align: left;
+  tab-size: 2;
+  -webkit-overflow-scrolling: touch;
+}
+.code-block code {
+  color: #f4f4f7;
+  font: 12px/1.7 "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  white-space: pre;
+}
+:root[data-theme="dark"] .message-copy-btn {
+  background: #292938;
+  border-color: #414154;
+  color: #e5e1f0;
+}
+@media(max-width:760px) {
+  .code-block pre { padding: 10px; }
+  .code-block code { font-size: 11px; }
+  .message-copy-btn { min-height: 27px; font-size: 10px; }
+}
