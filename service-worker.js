@@ -1,4 +1,4 @@
-const CACHE_NAME = "nexora-shell-v7";
+const CACHE_NAME = "nexora-shell-v8";
 const APP_ROOT = new URL("./", self.registration.scope);
 const APP_FILES = [
   "./",
