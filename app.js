@@ -449,39 +449,13 @@ function cleanTextForSpeech(value) {
     .trim();
 }
 
-function splitSpeechText(text, maxLength = 160) {
-  const sentences = text.match(/[^.!?؟。]+[.!?؟。]*/g) || [text];
-  const chunks = [];
-  let current = "";
-
-  for (const sentence of sentences) {
-    const words = sentence.trim().split(/\s+/);
-    for (const word of words) {
-      if (!word) continue;
-      const candidate = current ? current + " " + word : word;
-      if (candidate.length > maxLength && current) {
-        chunks.push(current);
-        current = word;
-      } else {
-        current = candidate;
-      }
-    }
-    if (current && /[.!?؟。]$/.test(sentence.trim())) {
-      chunks.push(current);
-      current = "";
-    }
-  }
-  if (current) chunks.push(current);
-  return chunks.filter(Boolean);
-}
-
 function speakAssistantMessage(message, button) {
   if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
     micStatus.textContent = "تشغيل الصوت غير مدعوم في المتصفح ده.";
     return;
   }
 
-  if (activeSpeakButton === button && window.speechSynthesis.speaking) {
+  if (activeSpeakButton === button && (window.speechSynthesis.speaking || window.speechSynthesis.pending)) {
     speechRunId++;
     window.speechSynthesis.cancel();
     button.classList.remove("speaking");
@@ -501,16 +475,22 @@ function speakAssistantMessage(message, button) {
     return;
   }
 
-  const chunks = splitSpeechText(textToRead);
-  const voices = window.speechSynthesis.getVoices();
+  // One utterance avoids Chrome queue gaps and dropped chunks for normal answers.
+  const chunks = [];
+  for (let i = 0; i < textToRead.length; i += 2800) chunks.push(textToRead.slice(i, i + 2800));
   let index = 0;
+  let started = false;
   activeSpeakButton = button;
   button.classList.add("speaking");
 
-  const finish = () => {
+  const finish = (errorMessage = "") => {
     if (thisRun !== speechRunId) return;
     button.classList.remove("speaking");
     if (activeSpeakButton === button) activeSpeakButton = null;
+    if (errorMessage) {
+      micStatus.textContent = errorMessage;
+      button.title = errorMessage;
+    }
   };
 
   const speakNext = () => {
@@ -522,32 +502,38 @@ function speakAssistantMessage(message, button) {
     const lang = isArabic ? "ar-EG" : "en-US";
     const utterance = new SpeechSynthesisUtterance(chunk);
     utterance.lang = lang;
-    utterance.rate = 0.92;
+    utterance.rate = 1;
     utterance.pitch = 1;
 
+    const voices = window.speechSynthesis.getVoices();
     const voice = voices.find(v => v.lang.toLowerCase() === lang.toLowerCase())
-      || voices.find(v => v.lang.toLowerCase().startsWith(isArabic ? "ar" : "en"));
-
-    // Never use an English voice to pronounce Arabic text; it produces garbled speech.
-    if (isArabic && !voice) {
-      finish();
-      micStatus.textContent = "مفيش صوت عربي متاح في المتصفح. فعّل صوتًا عربيًا من إعدادات Windows ثم أعد المحاولة.";
-      return;
-    }
+      || voices.find(v => v.lang.toLowerCase().startsWith(isArabic ? "ar-" : "en-"));
+    // If no matching Arabic voice is installed, let the browser choose its default
+    // instead of silently stopping the whole playback.
     if (voice) utterance.voice = voice;
 
+    utterance.onstart = () => { started = true; };
     utterance.onend = () => {
-      if (thisRun === speechRunId) setTimeout(speakNext, 120);
+      if (thisRun === speechRunId) setTimeout(speakNext, 60);
     };
-    utterance.onerror = () => {
-      if (thisRun === speechRunId) setTimeout(speakNext, 120);
+    utterance.onerror = (event) => {
+      if (thisRun !== speechRunId) return;
+      const reason = event.error || "unknown";
+      finish("المتصفح وقف القراءة (" + reason + "). جرّب تفعيل صوت عربي من إعدادات Windows.");
     };
-    window.speechSynthesis.speak(utterance);
+
+    try {
+      window.speechSynthesis.resume();
+      window.speechSynthesis.speak(utterance);
+    } catch (error) {
+      finish("تعذّر تشغيل الصوت: " + error.message);
+    }
   };
 
+  // Chrome may ignore speak() immediately after cancel(); wait briefly.
   setTimeout(() => {
     if (thisRun === speechRunId) speakNext();
-  }, 150);
+  }, 250);
 }
 
 function makeSpeakButton(message) {
@@ -716,7 +702,7 @@ function typeAssistantMessage(text) {
       if (index > 0) bubble.textContent += "\n";
       bubble.textContent += lines[index++];
       scrollToBottom();
-      setTimeout(showNextLine, 100);
+      setTimeout(showNextLine, 15);
     }
 
     showNextLine();
