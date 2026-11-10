@@ -873,3 +873,42 @@ textarea::placeholder {
   color: #f2f0fa;
   border-color: #414154;
 }
+
+
+/* Compact mobile layout: keep the composer anchored without page scrolling. */
+@media (max-width: 760px) {
+  html, body { height: 100%; min-height: 100%; overflow: hidden; }
+  .app { height: 100dvh; min-height: 0; overflow: hidden; }
+  .main { height: 100dvh; min-height: 0; overflow: hidden; }
+  .topbar { flex: 0 0 54px; height: 54px; min-height: 54px; padding: 0 10px; }
+  .topbar-right { gap: 8px; }
+  .model-name { gap: 6px; font-size: 13px; }
+  .model-tag { font-size: 9px; padding: 3px 6px; }
+  .topbar-actions { gap: 4px; }
+  .settings-open-btn, .clear-btn { padding: 6px 7px; font-size: 10px; }
+  .conversation {
+    flex: 1 1 auto; min-height: 0; overflow-y: auto;
+    overscroll-behavior: contain; padding: 12px 10px 8px;
+  }
+  .welcome { padding: 12px 0 18px; }
+  .welcome-icon { width: 48px; height: 48px; font-size: 26px; border-radius: 15px; }
+  .eyebrow { margin-top: 10px; font-size: 10px; }
+  .welcome h1 { margin: 5px 0; font-size: 20px; }
+  .welcome p { margin: 0 0 12px; font-size: 11px; }
+  .suggestions { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; width: 100%; }
+  .suggestion { min-height: 42px; padding: 8px; gap: 5px; font-size: 10px; border-radius: 10px; }
+  .messages { gap: 12px; padding-bottom: 10px; }
+  .message { gap: 7px; }
+  .msg-avatar { width: 28px; height: 28px; flex-basis: 28px; border-radius: 9px; font-size: 10px; }
+  .bubble { max-width: calc(100% - 35px); padding: 9px 12px; border-radius: 16px; font-size: 13px; line-height: 1.75; }
+  .composer-wrap {
+    flex: 0 0 auto; width: calc(100% - 16px); margin: 0 auto;
+    padding: 5px 0 max(5px, env(safe-area-inset-bottom));
+    background: var(--surface, #fff);
+  }
+  .composer { gap: 6px; padding: 7px 8px; border-radius: 15px; }
+  .composer textarea { min-height: 28px; max-height: 100px; padding: 4px 3px; font-size: 14px; }
+  .send-btn, .mic-btn { width: 36px; height: 36px; flex-basis: 36px; border-radius: 11px; }
+  .disclaimer { padding-top: 4px; font-size: 9px; }
+  .copyright { margin: 3px 0 0; font-size: 9px; }
+}
