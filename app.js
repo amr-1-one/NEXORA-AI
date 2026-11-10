@@ -124,6 +124,10 @@ function applyPreferences() {
     else if (selector === ".welcome h1") element.innerHTML = isEnglish ? 'Welcome to <span>NEXORA AI</span>' : 'أهلاً بك في <span>NEXORA AI</span>';
     else element.textContent = value;
   });
+  const chatSearch = document.getElementById("chatSearch");
+  if (chatSearch) chatSearch.placeholder = isEnglish ? "Search your conversations..." : "ابحث في محادثاتك...";
+  const createFolder = document.getElementById("createFolderBtn");
+  if (createFolder) createFolder.textContent = isEnglish ? "＋ New folder" : "＋ مجلد جديد";
   document.querySelectorAll(".suggestion").forEach((button, index) => {
     const en = ["💡 Explain a topic", "⌨️ Write some code", "📚 Help me study", "🚀 Suggest ideas"];
     const ar = ["💡 اشرح لي موضوعًا", "⌨️ اكتب لي كودًا", "📚 ساعدني في المذاكرة", "🚀 اقترح أفكارًا"];
@@ -246,6 +250,7 @@ function normalizeChatOrganization(value){
  return {folders:Array.isArray(d.folders)?[...new Set(d.folders.filter(x=>typeof x==="string"&&x.trim()))]:[],pinnedIds:Array.isArray(d.pinnedIds)?[...new Set(d.pinnedIds)]:[],folderByChat:d.folderByChat&&typeof d.folderByChat==="object"?d.folderByChat:{},titleOverrides:d.titleOverrides&&typeof d.titleOverrides==="object"?d.titleOverrides:{}};
 }
 function loadChatOrganization(){
+ activeFolderFilter="all";
  if(currentUser)chatOrganization=normalizeChatOrganization(currentUser.user_metadata?.nexora_chat_organization);
  else{try{chatOrganization=normalizeChatOrganization(JSON.parse(localStorage.getItem("nexora-chat-organization")||"{}"));}catch{chatOrganization=normalizeChatOrganization({});}}
 }
