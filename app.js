@@ -346,11 +346,11 @@ function getNexoraMemoryContext() {
 function extractExplicitMemory(text) {
   const value = String(text || "").trim();
   if (!value) return null;
-  let match = value.match(/^(?:أنا\\s+)?اسمي\\s+(.{1,50})$/i);
+  let match = value.match(/^(?:أنا\s+)?اسمي\s+(.{1,50})$/i);
   if (match) return "اسم المستخدم: " + match[1].replace(/[.!؟?،,]+$/g, "").trim();
-  match = value.match(/^(?:my name is|i am|i'm)\\s+([a-z][a-z0-9 _'-]{0,38})[.!?]*$/i);
+  match = value.match(/^(?:my name is|i am|i'm)\s+([a-z][a-z0-9 _'-]{0,38})[.!?]*$/i);
   if (match) return "User's name: " + match[1].trim();
-  match = value.match(/^(?:افتكر(?:\\s+إن)?|احفظ(?:\\s+إن)?|خلي بالك(?:\\s+إن)?|تذكر(?:\\s+أن)?|remember(?:\\s+that)?|please remember(?:\\s+that)?)\\s+(.{3,160})$/i);
+  match = value.match(/^(?:افتكر(?:\s+إن)?|احفظ(?:\s+إن)?|خلي بالك(?:\s+إن)?|تذكر(?:\s+أن)?|remember(?:\s+that)?|please remember(?:\s+that)?)\s+(.{3,160})$/i);
   if (match) return match[1].trim();
   return null;
 }
@@ -622,7 +622,7 @@ let activeSpeechUrl = null;
 let speechRunId = 0;
 
 function cleanTextForSpeech(value) {
-  const codeFence = new RegExp("\\x60{3}[\\s\\S]*?\\x60{3}", "g");
+  const codeFence = new RegExp("\\x60{3}[\s\\S]*?\\x60{3}", "g");
   return String(value || "")
     .replace(codeFence, " ")
     .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
@@ -1299,7 +1299,7 @@ let speechFinalParts = [];
 let speechInterimParts = [];
 
 function normalizeSpeechPart(value) {
-  return (value || "").replace(/\\s+/g, " ").trim();
+  return (value || "").replace(/\s+/g, " ").trim();
 }
 
 function renderSpeechTranscript() {
