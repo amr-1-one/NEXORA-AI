@@ -398,6 +398,91 @@ function addMessage(role, text, displayText = text) {
   renderMessages();
 }
 
+async function copyTextToClipboard(text, button) {
+  const originalLabel = button.textContent;
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const helper = document.createElement("textarea");
+      helper.value = text;
+      helper.style.position = "fixed";
+      helper.style.opacity = "0";
+      document.body.appendChild(helper);
+      helper.select();
+      const copied = document.execCommand("copy");
+      helper.remove();
+      if (!copied) throw new Error("Copy failed");
+    }
+    button.textContent = preferences.language === "en" ? "Copied ✓" : "تم النسخ ✓";
+  } catch {
+    button.textContent = preferences.language === "en" ? "Copy failed" : "تعذّر النسخ";
+  }
+  setTimeout(() => { button.textContent = originalLabel; }, 1600);
+}
+
+function makeCopyButton(text, label) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "message-copy-btn";
+  button.textContent = label;
+  button.addEventListener("click", () => copyTextToClipboard(text, button));
+  return button;
+}
+
+function renderAssistantContent(bubble, message) {
+  const raw = message.text || "";
+  const parts = raw.split(/```([\w+-]*)\n?([\s\S]*?)```/g);
+
+  for (let i = 0; i < parts.length; i += 3) {
+    const prose = parts[i] || "";
+    if (prose) {
+      const textPart = document.createElement("div");
+      textPart.className = "assistant-prose";
+      prose.split("\n").forEach((line, index) => {
+        if (index) textPart.appendChild(document.createElement("br"));
+        textPart.appendChild(document.createTextNode(line));
+      });
+      bubble.appendChild(textPart);
+    }
+
+    if (i + 2 < parts.length) {
+      const language = (parts[i + 1] || "").trim() || "code";
+      const code = (parts[i + 2] || "").replace(/\n$/, "");
+      const block = document.createElement("section");
+      block.className = "code-block";
+
+      const header = document.createElement("div");
+      header.className = "code-block-header";
+      const languageLabel = document.createElement("span");
+      languageLabel.textContent = language;
+      const codeCopy = makeCopyButton(code, preferences.language === "en" ? "Copy code" : "نسخ الكود");
+      header.append(languageLabel, codeCopy);
+
+      const pre = document.createElement("pre");
+      const codeElement = document.createElement("code");
+      codeElement.textContent = code;
+      pre.appendChild(codeElement);
+      block.append(header, pre);
+      bubble.appendChild(block);
+    }
+  }
+
+  const actions = document.createElement("div");
+  actions.className = "assistant-message-actions";
+  actions.appendChild(makeCopyButton(raw, preferences.language === "en" ? "Copy answer" : "نسخ الإجابة"));
+  bubble.appendChild(actions);
+
+  if (message.imageDataUrl) {
+    const image = document.createElement("img");
+    image.className = "chat-generated-image";
+    image.src = message.imageDataUrl;
+    image.alt = preferences.language === "en" ? "Edited image" : "الصورة بعد التعديل";
+    image.loading = "lazy";
+    bubble.appendChild(image);
+  }
+}
+
 function renderMessages() {
   welcome.style.display = messages.length ? "none" : "flex";
   messagesEl.innerHTML = "";
@@ -412,15 +497,10 @@ function renderMessages() {
 
     const bubble = document.createElement("div");
     bubble.className = "bubble";
-    bubble.textContent = message.displayText || message.text;
-    if (message.imageDataUrl) {
-      const image = document.createElement("img");
-      image.className = "chat-generated-image";
-      image.src = message.imageDataUrl;
-      image.alt = preferences.language === "en" ? "Edited image" : "الصورة بعد التعديل";
-      image.loading = "lazy";
-      bubble.appendChild(document.createElement("br"));
-      bubble.appendChild(image);
+    if (message.role === "assistant") {
+      renderAssistantContent(bubble, message);
+    } else {
+      bubble.textContent = message.displayText || message.text;
     }
 
     row.append(avatar, bubble);
@@ -494,7 +574,10 @@ function typeAssistantMessage(text) {
 
     function showNextLine() {
       if (index >= lines.length) {
-        messages.push({ role: "assistant", text });
+        const message = { role: "assistant", text };
+        messages.push(message);
+        bubble.textContent = "";
+        renderAssistantContent(bubble, message);
         persistCurrent();
         resolve();
         return;
