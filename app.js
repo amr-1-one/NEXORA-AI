@@ -521,6 +521,24 @@ async function sendMessage(text) {
 
   let attachmentContext = "";
   let visibleAttachmentNames = [];
+  let waiting = null;
+  let waitingBubble = null;
+
+  // Show immediate feedback so users know the attachment is being processed.
+  if (selectedFiles.length) {
+    waiting = document.createElement("div");
+    waiting.className = "message assistant";
+    const waitingAvatar = document.createElement("div");
+    waitingAvatar.className = "msg-avatar";
+    waitingAvatar.textContent = "✦";
+    waitingBubble = document.createElement("div");
+    waitingBubble.className = "bubble typing";
+    waitingBubble.textContent = "جارٍ تجهيز الملف وقراءة محتواه... من فضلك انتظر.";
+    waiting.append(waitingAvatar, waitingBubble);
+    messagesEl.appendChild(waiting);
+    scrollToBottom();
+  }
+
   if (selectedFiles.length) {
     try {
       const extracted = [];
@@ -530,10 +548,12 @@ async function sendMessage(text) {
         visibleAttachmentNames.push(file.name);
       }
       attachmentContext = extracted.join("\\n\\n");
+      if (waitingBubble) waitingBubble.textContent = "تم تجهيز الملف، جارٍ إرسال رسالتك...";
       renderSelectedFiles();
       selectedFiles = [];
       renderSelectedFiles();
     } catch (error) {
+      if (waiting) waiting.remove();
       alert("تعذّر قراءة الملف: " + error.message);
       sendBtn.disabled = false;
       isTyping = false;
@@ -563,19 +583,18 @@ async function sendMessage(text) {
     return;
   }
 
-  const waiting = document.createElement("div");
-  waiting.className = "message assistant";
-
-  const waitingAvatar = document.createElement("div");
-  waitingAvatar.className = "msg-avatar";
-  waitingAvatar.textContent = "✦";
-
-  const waitingBubble = document.createElement("div");
-  waitingBubble.className = "bubble typing";
+  if (!waiting) {
+    waiting = document.createElement("div");
+    waiting.className = "message assistant";
+    const waitingAvatar = document.createElement("div");
+    waitingAvatar.className = "msg-avatar";
+    waitingAvatar.textContent = "✦";
+    waitingBubble = document.createElement("div");
+    waitingBubble.className = "bubble typing";
+    waiting.append(waitingAvatar, waitingBubble);
+    messagesEl.appendChild(waiting);
+  }
   waitingBubble.textContent = "NEXORA AI بيفكر...";
-
-  waiting.append(waitingAvatar, waitingBubble);
-  messagesEl.appendChild(waiting);
   scrollToBottom();
 
   try {
