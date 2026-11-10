@@ -373,7 +373,7 @@ function renderHistory() {
       messages = [...(chat.messages || [])];
       renderMessages();
       renderHistory();
-      document.querySelector(".sidebar").classList.remove("open");
+      closeHistoryPanel();
     });
 
     const deleteButton = document.createElement("button");
@@ -718,7 +718,7 @@ document.getElementById("newChat").addEventListener("click", () => {
   activeChatId = null;
   renderMessages();
   renderHistory();
-  document.querySelector(".sidebar").classList.remove("open");
+  closeHistoryPanel();
 });
 
 document.getElementById("clearChat").addEventListener("click", () => {
@@ -734,8 +734,19 @@ document.getElementById("clearChat").addEventListener("click", () => {
   }
 });
 
+function closeHistoryPanel() {
+  const sidebar = document.querySelector(".sidebar");
+  sidebar.classList.remove("open");
+  sidebar.classList.add("collapsed");
+}
+
 document.getElementById("menuBtn").addEventListener("click", () => {
-  document.querySelector(".sidebar").classList.toggle("open");
+  const sidebar = document.querySelector(".sidebar");
+  if (window.matchMedia("(max-width: 760px)").matches) {
+    sidebar.classList.toggle("open");
+  } else {
+    sidebar.classList.toggle("collapsed");
+  }
 });
 
 document.getElementById("settingsOpen").addEventListener("click", openSettings);
