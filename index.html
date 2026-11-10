@@ -36,6 +36,7 @@
       <div class="history-tools">
         <input id="chatSearch" class="chat-search" type="search" placeholder="ابحث في محادثاتك..." aria-label="البحث في المحادثات">
         <button id="createFolderBtn" class="create-folder-btn" type="button">＋ مجلد جديد</button>
+        <button id="openMemoryBtn" class="memory-open-btn" type="button">🧠 ذاكرتي</button>
       </div>
       <div id="folderFilters" class="folder-filters"></div>
       <div id="history" class="history"></div>
@@ -150,6 +151,23 @@
         <p class="settings-note" id="settingsMessage">يتم حفظ الإعدادات في حسابك عند تسجيل الدخول.</p>
         <div class="settings-actions"><button type="button" class="settings-cancel" id="settingsCancel">إلغاء</button><button type="submit" class="auth-submit" id="settingsSave">حفظ الإعدادات</button></div>
       </form>
+    </section>
+  </div>
+
+  
+  <div class="modal-backdrop hidden" id="memoryModal">
+    <section class="settings-modal memory-modal" role="dialog" aria-modal="true" aria-labelledby="memoryTitle">
+      <button class="modal-close" id="memoryClose" type="button" aria-label="إغلاق">×</button>
+      <div class="settings-heading"><div class="modal-brand">🧠</div><div><h2 id="memoryTitle">ذاكرة NEXORA</h2><p class="modal-subtitle" id="memorySubtitle">معلومات توافق على حفظها لتتذكرها NEXORA في المحادثات الجديدة.</p></div></div>
+      <div class="memory-add-row">
+        <input id="memoryInput" type="text" maxlength="180" placeholder="مثال: اسمي كينج، وأفضل الشرح المختصر">
+        <button id="memoryAddBtn" type="button">إضافة</button>
+      </div>
+      <div id="memoryList" class="memory-list"></div>
+      <div class="memory-footer">
+        <p class="settings-note" id="memoryStatus">الذاكرة محفوظة في حسابك عند تسجيل الدخول، أو على هذا الجهاز للزائر.</p>
+        <button id="memoryClearBtn" class="memory-clear-btn" type="button">مسح كل الذكريات</button>
+      </div>
     </section>
   </div>
 
