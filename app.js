@@ -616,7 +616,7 @@ function renderHistory(){
    const b=document.createElement("button");
    b.type="button";
    b.className=cls;
-   b.textContent=symbol;
+   b.textContent=symbol+"  "+title;
    b.title=title;
    b.setAttribute("aria-label",title);
    b.addEventListener("click",event=>{
