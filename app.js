@@ -556,29 +556,88 @@ async function deleteConversation(chatId) {
 }
 
 function renderHistory(){
- historyEl.innerHTML="";renderFolderFilters();
+ historyEl.innerHTML="";
+ renderFolderFilters();
  const pinned=new Set(chatOrganization.pinnedIds);
  const list=conversations.filter(c=>activeFolderFilter==="all"||chatOrganization.folderByChat[c.id]===activeFolderFilter)
  .filter(c=>chatTextMatches(c,chatSearchQuery))
  .sort((a,b)=>(Number(pinned.has(b.id))-Number(pinned.has(a.id)))||((b.updatedAt||0)-(a.updatedAt||0)));
- if(!list.length){const e=document.createElement("div");e.className="history-empty";e.textContent=preferences.language==="en"?"No matching conversations.":"لا توجد محادثات مطابقة.";historyEl.appendChild(e);return;}
+ if(!list.length){
+  const e=document.createElement("div");
+  e.className="history-empty";
+  e.textContent=preferences.language==="en"?"No matching conversations.":"لا توجد محادثات مطابقة.";
+  historyEl.appendChild(e);
+  return;
+ }
  list.forEach(chat=>{
-  const row=document.createElement("div");row.className="history-row";
-  const open=document.createElement("button");open.className="history-item";open.type="button";open.textContent=(pinned.has(chat.id)?"📌 ":"")+(chat.title||(preferences.language==="en"?"New chat":"محادثة جديدة"));open.title=chat.title||"";
+  const row=document.createElement("div");
+  row.className="history-row";
+  if(chat.id===activeChatId)row.classList.add("active");
+  const open=document.createElement("button");
+  open.className="history-item";
+  open.type="button";
+  open.textContent=(pinned.has(chat.id)?"📌 ":"")+(chat.title||(preferences.language==="en"?"New chat":"محادثة جديدة"));
+  open.title=chat.title||"";
   if(chat.id===activeChatId)open.classList.add("active");
-  open.addEventListener("click",()=>{if(isTyping)return;activeChatId=chat.id;messages=[...(chat.messages||[])];renderMessages();renderHistory();closeHistoryPanel();});
-  const actions=document.createElement("div");actions.className="history-actions";
-  const action=(symbol,title,handler,cls="history-action")=>{const b=document.createElement("button");b.type="button";b.className=cls;b.textContent=symbol;b.title=title;b.setAttribute("aria-label",title);b.addEventListener("click",handler);return b;};
+  open.addEventListener("click",()=>{
+   if(isTyping)return;
+   activeChatId=chat.id;
+   messages=[...(chat.messages||[])];
+   renderMessages();
+   renderHistory();
+   closeHistoryPanel();
+  });
+
+  const menuWrap=document.createElement("div");
+  menuWrap.className="history-menu-wrap";
+  const menuButton=document.createElement("button");
+  menuButton.type="button";
+  menuButton.className="history-menu-trigger";
+  menuButton.textContent="⋮";
+  menuButton.title=preferences.language==="en"?"Conversation options":"خيارات المحادثة";
+  menuButton.setAttribute("aria-label",menuButton.title);
+  menuButton.setAttribute("aria-expanded","false");
+  menuButton.addEventListener("click",event=>{
+   event.stopPropagation();
+   const wasOpen=menuWrap.classList.contains("menu-open");
+   historyEl.querySelectorAll(".history-menu-wrap.menu-open").forEach(el=>{
+    el.classList.remove("menu-open");
+    el.querySelector(".history-menu-trigger")?.setAttribute("aria-expanded","false");
+   });
+   if(!wasOpen){
+    menuWrap.classList.add("menu-open");
+    menuButton.setAttribute("aria-expanded","true");
+   }
+  });
+
+  const actions=document.createElement("div");
+  actions.className="history-actions";
+  const action=(symbol,title,handler,cls="history-action")=>{
+   const b=document.createElement("button");
+   b.type="button";
+   b.className=cls;
+   b.textContent=symbol;
+   b.title=title;
+   b.setAttribute("aria-label",title);
+   b.addEventListener("click",event=>{
+    event.stopPropagation();
+    menuWrap.classList.remove("menu-open");
+    menuButton.setAttribute("aria-expanded","false");
+    handler();
+   });
+   return b;
+  };
   actions.append(
    action(pinned.has(chat.id)?"📌":"☆",preferences.language==="en"?(pinned.has(chat.id)?"Unpin":"Pin"):(pinned.has(chat.id)?"إلغاء التثبيت":"تثبيت"),()=>togglePinnedConversation(chat.id)),
    action("✎",preferences.language==="en"?"Rename":"إعادة التسمية",()=>renameConversation(chat.id)),
    action("📁",preferences.language==="en"?"Move to folder":"نقل إلى مجلد",()=>moveConversationToFolder(chat.id)),
-   action("×",preferences.language==="en"?"Delete conversation":"حذف المحادثة",()=>deleteConversation(chat.id),"history-delete")
+   action("⌫",preferences.language==="en"?"Delete conversation":"حذف المحادثة",()=>deleteConversation(chat.id),"history-action history-delete")
   );
-  row.append(open,actions);historyEl.appendChild(row);
+  menuWrap.append(menuButton,actions);
+  row.append(open,menuWrap);
+  historyEl.appendChild(row);
  });
 }
-
 function addMessage(role, text, displayText = text) {
   messages.push({ role, text, displayText });
   renderMessages();
@@ -1682,3 +1741,20 @@ initializeApp();
     installButton.hidden = true;
   });
 })();
+
+
+// Close conversation menus when the user clicks elsewhere or presses Escape.
+document.addEventListener("click", event => {
+ if (event.target.closest(".history-menu-wrap")) return;
+ document.querySelectorAll(".history-menu-wrap.menu-open").forEach(el => {
+  el.classList.remove("menu-open");
+  el.querySelector(".history-menu-trigger")?.setAttribute("aria-expanded","false");
+ });
+});
+document.addEventListener("keydown", event => {
+ if (event.key !== "Escape") return;
+ document.querySelectorAll(".history-menu-wrap.menu-open").forEach(el => {
+  el.classList.remove("menu-open");
+  el.querySelector(".history-menu-trigger")?.setAttribute("aria-expanded","false");
+ });
+});
