@@ -128,6 +128,9 @@ function applyPreferences() {
   if (chatSearch) chatSearch.placeholder = isEnglish ? "Search your conversations..." : "ابحث في محادثاتك...";
   const createFolder = document.getElementById("createFolderBtn");
   if (createFolder) createFolder.textContent = isEnglish ? "＋ New folder" : "＋ مجلد جديد";
+  const memoryButton = document.getElementById("openMemoryBtn");
+  if (memoryButton) memoryButton.textContent = isEnglish ? "🧠 My memory" : "🧠 ذاكرتي";
+  if (!document.getElementById("memoryModal")?.classList.contains("hidden")) renderNexoraMemory();
   document.querySelectorAll(".suggestion").forEach((button, index) => {
     const en = ["💡 Explain a topic", "⌨️ Write some code", "📚 Help me study", "🚀 Suggest ideas"];
     const ar = ["💡 اشرح لي موضوعًا", "⌨️ اكتب لي كودًا", "📚 ساعدني في المذاكرة", "🚀 اقترح أفكارًا"];
@@ -299,6 +302,131 @@ async function moveConversationToFolder(id){
  if(!name||name===none)delete chatOrganization.folderByChat[id];
  else{const clean=name.slice(0,32);if(!chatOrganization.folders.includes(clean))chatOrganization.folders.push(clean);chatOrganization.folderByChat[id]=clean;}
  await saveChatOrganization();renderHistory();
+}
+
+
+let nexoraMemory = [];
+
+function normalizeNexoraMemory(value) {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.filter(item => typeof item === "string").map(item => item.trim()).filter(Boolean))].slice(0, 30);
+}
+function loadNexoraMemory() {
+  if (currentUser) {
+    nexoraMemory = normalizeNexoraMemory(currentUser.user_metadata?.nexora_memory);
+  } else {
+    try { nexoraMemory = normalizeNexoraMemory(JSON.parse(localStorage.getItem("nexora-memory") || "[]")); }
+    catch { nexoraMemory = []; }
+  }
+}
+async function saveNexoraMemory() {
+  nexoraMemory = normalizeNexoraMemory(nexoraMemory);
+  if (!currentUser) {
+    localStorage.setItem("nexora-memory", JSON.stringify(nexoraMemory));
+    return true;
+  }
+  const { data, error } = await supabaseClient.auth.updateUser({
+    data: { ...(currentUser.user_metadata || {}), nexora_memory: nexoraMemory }
+  });
+  if (error) {
+    console.error("Save NEXORA memory error:", error);
+    alert((preferences.language === "en" ? "Could not save memory: " : "تعذّر حفظ الذاكرة: ") + error.message);
+    return false;
+  }
+  if (data?.user) currentUser = data.user;
+  return true;
+}
+function getNexoraMemoryContext() {
+  if (!nexoraMemory.length) return "";
+  const facts = nexoraMemory.map((item, index) => (index + 1) + ". " + item).join("\\n");
+  return preferences.language === "en"
+    ? "\\n\\n[Saved user memory — use these facts only when relevant, do not invent details, and do not repeat the list unless asked:\\n" + facts + "]"
+    : "\\n\\n[ذاكرة محفوظة عن المستخدم — استخدم هذه المعلومات فقط عندما تكون ذات صلة، ولا تخترع معلومات إضافية، ولا تسرد الذاكرة إلا إذا طُلب منك ذلك:\\n" + facts + "]";
+}
+function extractExplicitMemory(text) {
+  const value = String(text || "").trim();
+  if (!value) return null;
+  let match = value.match(/^(?:أنا\\s+)?اسمي\\s+(.{1,50})$/i);
+  if (match) return "اسم المستخدم: " + match[1].replace(/[.!؟?،,]+$/g, "").trim();
+  match = value.match(/^(?:my name is|i am|i'm)\\s+([a-z][a-z0-9 _'-]{0,38})[.!?]*$/i);
+  if (match) return "User's name: " + match[1].trim();
+  match = value.match(/^(?:افتكر(?:\\s+إن)?|احفظ(?:\\s+إن)?|خلي بالك(?:\\s+إن)?|تذكر(?:\\s+أن)?|remember(?:\\s+that)?|please remember(?:\\s+that)?)\\s+(.{3,160})$/i);
+  if (match) return match[1].trim();
+  return null;
+}
+async function rememberFromUserMessage(text) {
+  const fact = extractExplicitMemory(text);
+  if (!fact) return;
+  const exists = nexoraMemory.some(item => item.toLocaleLowerCase() === fact.toLocaleLowerCase());
+  if (exists) return;
+  nexoraMemory.unshift(fact);
+  nexoraMemory = nexoraMemory.slice(0, 30);
+  await saveNexoraMemory();
+}
+function renderNexoraMemory() {
+  const list = document.getElementById("memoryList");
+  if (!list) return;
+  list.innerHTML = "";
+  const en = preferences.language === "en";
+  if (!nexoraMemory.length) {
+    const empty = document.createElement("p");
+    empty.className = "memory-empty";
+    empty.textContent = en ? "No saved memories yet. Tell NEXORA “remember that…” or add one above." : "لا توجد ذكريات محفوظة بعد. قل لـ NEXORA «افتكر إن…» أو أضف معلومة من الأعلى.";
+    list.appendChild(empty);
+  }
+  nexoraMemory.forEach((fact, index) => {
+    const row = document.createElement("div");
+    row.className = "memory-item";
+    const text = document.createElement("span");
+    text.textContent = fact;
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "memory-remove-btn";
+    remove.textContent = "×";
+    remove.title = en ? "Delete memory" : "حذف الذكرى";
+    remove.addEventListener("click", async () => {
+      nexoraMemory.splice(index, 1);
+      if (await saveNexoraMemory()) renderNexoraMemory();
+    });
+    row.append(text, remove);
+    list.appendChild(row);
+  });
+  const status = document.getElementById("memoryStatus");
+  if (status) status.textContent = currentUser
+    ? (en ? "Memories sync with your signed-in account." : "ذكرياتك متزامنة مع حسابك وتظهر في محادثاتك الجديدة.")
+    : (en ? "Guest memories are stored on this device only. Sign in to sync across devices." : "ذكريات الزائر محفوظة على هذا الجهاز فقط. سجّل الدخول لمزامنتها بين أجهزتك.");
+  const title = document.getElementById("memoryTitle");
+  if (title) title.textContent = en ? "NEXORA Memory" : "ذاكرة NEXORA";
+  const subtitle = document.getElementById("memorySubtitle");
+  if (subtitle) subtitle.textContent = en ? "Facts you choose to save for future conversations." : "معلومات توافق على حفظها لتتذكرها NEXORA في المحادثات الجديدة.";
+  const add = document.getElementById("memoryAddBtn");
+  if (add) add.textContent = en ? "Add" : "إضافة";
+  const input = document.getElementById("memoryInput");
+  if (input) input.placeholder = en ? "Example: My name is King; I prefer short explanations" : "مثال: اسمي كينج، وأفضل الشرح المختصر";
+  const clear = document.getElementById("memoryClearBtn");
+  if (clear) clear.textContent = en ? "Clear all memories" : "مسح كل الذكريات";
+}
+async function addManualMemory() {
+  const input = document.getElementById("memoryInput");
+  const fact = input.value.trim().slice(0, 180);
+  if (!fact) return;
+  if (nexoraMemory.some(item => item.toLocaleLowerCase() === fact.toLocaleLowerCase())) {
+    alert(preferences.language === "en" ? "This memory already exists." : "المعلومة دي محفوظة بالفعل.");
+    return;
+  }
+  nexoraMemory.unshift(fact);
+  nexoraMemory = nexoraMemory.slice(0, 30);
+  if (await saveNexoraMemory()) {
+    input.value = "";
+    renderNexoraMemory();
+  } else nexoraMemory.shift();
+}
+async function clearNexoraMemory() {
+  if (!confirm(preferences.language === "en" ? "Delete all saved memories?" : "هل تريد مسح كل الذكريات المحفوظة؟")) return;
+  const previous = nexoraMemory;
+  nexoraMemory = [];
+  if (await saveNexoraMemory()) renderNexoraMemory();
+  else nexoraMemory = previous;
 }
 
 function readGuestChats() {
@@ -974,6 +1102,8 @@ async function sendMessage(text) {
     // the sender. Never send a user_id supplied by the browser.
     const { data: sessionData } = await supabaseClient.auth.getSession();
     const accessToken = sessionData.session?.access_token;
+    await rememberFromUserMessage(originalPrompt);
+    const memoryContext = getNexoraMemoryContext();
 
     const response = await fetch(API_URL + "/api/chat", {
       method: "POST",
@@ -985,7 +1115,7 @@ async function sendMessage(text) {
         messages: messages.slice(-12).map((message, index, recentMessages) => ({
           role: message.role === "assistant" ? "model" : "user",
           text: message.text + (index === recentMessages.length - 1 && message.role !== "assistant"
-            ? "\n\n" + getResponseLengthInstruction()
+            ? "\n\n" + getResponseLengthInstruction() + memoryContext
             : "")
         })),
         images: imageAttachments
@@ -1326,6 +1456,21 @@ document.addEventListener("click", event => {
 });
 
 document.getElementById("settingsOpen").addEventListener("click", openSettings);
+document.getElementById("openMemoryBtn").addEventListener("click", () => {
+  loadNexoraMemory();
+  renderNexoraMemory();
+  document.getElementById("memoryModal").classList.remove("hidden");
+});
+document.getElementById("memoryClose").addEventListener("click", () => document.getElementById("memoryModal").classList.add("hidden"));
+document.getElementById("memoryModal").addEventListener("click", event => {
+  if (event.target.id === "memoryModal") event.currentTarget.classList.add("hidden");
+});
+document.getElementById("memoryAddBtn").addEventListener("click", addManualMemory);
+document.getElementById("memoryInput").addEventListener("keydown", event => {
+  if (event.key === "Enter") { event.preventDefault(); addManualMemory(); }
+});
+document.getElementById("memoryClearBtn").addEventListener("click", clearNexoraMemory);
+
 document.getElementById("settingsClose").addEventListener("click", () => document.getElementById("settingsModal").classList.add("hidden"));
 document.getElementById("settingsCancel").addEventListener("click", () => document.getElementById("settingsModal").classList.add("hidden"));
 document.getElementById("settingsModal").addEventListener("click", event => {
@@ -1456,6 +1601,7 @@ supabaseClient.auth.onAuthStateChange(async (_event, session) => {
 
   currentUser = nextUser;
   await loadPreferences();
+  loadNexoraMemory();
   updateProfile();
 
   // Run data requests after the auth callback releases Supabase's internal lock.
@@ -1481,6 +1627,7 @@ async function initializeApp() {
 
   currentUser = data.session?.user || null;
   await loadPreferences();
+  loadNexoraMemory();
   updateProfile();
 
   if (currentUser) {
