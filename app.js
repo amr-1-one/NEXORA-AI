@@ -434,27 +434,28 @@ let activeSpeakButton = null;
 let speechRunId = 0;
 
 function cleanTextForSpeech(value) {
+  const codeFence = new RegExp("\x60{3}[\\s\\S]*?\x60{3}", "g");
   return String(value || "")
-    .replace(/```[\\s\\S]*?```/g, " ")
-    .replace(/!\\[([^\\]]*)\\]\\([^)]+\\)/g, "$1")
-    .replace(/\\[([^\\]]+)\\]\\([^)]+\\)/g, "$1")
-    .replace(/https?:\\/\\/\\S+/gi, " ")
+    .replace(codeFence, " ")
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/https?:\/\/\S+/gi, " ")
     .replace(/<[^>]*>/g, " ")
     .replace(/【[^】]*】/g, " ")
-    .replace(/^\\s{0,3}#{1,6}\\s*/gm, "")
-    .replace(/\\b(?:https?|www)\\S+/gi, " ")
+    .replace(/^\s{0,3}#{1,6}\s*/gm, "")
+    .replace(/\b(?:https?|www)\S+/gi, " ")
     .replace(/[|*_~>#]/g, " ")
-    .replace(/\\s+/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
-function splitSpeechText(text, maxLength = 180) {
+function splitSpeechText(text, maxLength = 160) {
   const sentences = text.match(/[^.!?؟。]+[.!?؟。]*/g) || [text];
   const chunks = [];
   let current = "";
 
   for (const sentence of sentences) {
-    const words = sentence.trim().split(/\\s+/);
+    const words = sentence.trim().split(/\s+/);
     for (const word of words) {
       if (!word) continue;
       const candidate = current ? current + " " + word : word;
@@ -492,10 +493,10 @@ function speakAssistantMessage(message, button) {
   const thisRun = speechRunId;
   window.speechSynthesis.cancel();
   if (activeSpeakButton) activeSpeakButton.classList.remove("speaking");
-  activeSpeakButton = null;
 
   const textToRead = cleanTextForSpeech(message?.text);
   if (!textToRead) {
+    activeSpeakButton = null;
     micStatus.textContent = "الرد ده مفيهوش نص أقدر أقراه.";
     return;
   }
@@ -514,13 +515,10 @@ function speakAssistantMessage(message, button) {
 
   const speakNext = () => {
     if (thisRun !== speechRunId) return;
-    if (index >= chunks.length) {
-      finish();
-      return;
-    }
+    if (index >= chunks.length) return finish();
 
     const chunk = chunks[index++];
-    const isArabic = /[\\u0600-\\u06FF]/.test(chunk);
+    const isArabic = /[\u0600-\u06FF]/.test(chunk);
     const lang = isArabic ? "ar-EG" : "en-US";
     const utterance = new SpeechSynthesisUtterance(chunk);
     utterance.lang = lang;
@@ -532,19 +530,17 @@ function speakAssistantMessage(message, button) {
     if (voice) utterance.voice = voice;
 
     utterance.onend = () => {
-      if (thisRun === speechRunId) setTimeout(speakNext, 90);
+      if (thisRun === speechRunId) setTimeout(speakNext, 120);
     };
     utterance.onerror = () => {
-      if (thisRun === speechRunId) setTimeout(speakNext, 90);
+      if (thisRun === speechRunId) setTimeout(speakNext, 120);
     };
-
     window.speechSynthesis.speak(utterance);
   };
 
-  // A short delay after cancel avoids a Chrome speech queue race.
   setTimeout(() => {
     if (thisRun === speechRunId) speakNext();
-  }, 120);
+  }, 150);
 }
 
 function makeSpeakButton(message) {
