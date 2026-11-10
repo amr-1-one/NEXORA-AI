@@ -736,17 +736,30 @@ document.getElementById("clearChat").addEventListener("click", () => {
 
 function closeHistoryPanel() {
   const sidebar = document.querySelector(".sidebar");
-  sidebar.classList.remove("open");
+  sidebar.classList.remove("open", "history-open");
   sidebar.classList.add("collapsed");
 }
 
-document.getElementById("menuBtn").addEventListener("click", () => {
+document.getElementById("menuBtn").addEventListener("click", event => {
+  event.stopPropagation();
   const sidebar = document.querySelector(".sidebar");
-  if (window.matchMedia("(max-width: 760px)").matches) {
-    sidebar.classList.toggle("open");
+  const isMobile = window.matchMedia("(max-width: 760px)").matches;
+  if (isMobile) {
+    const opening = !sidebar.classList.contains("open");
+    sidebar.classList.toggle("open", opening);
+    sidebar.classList.toggle("history-open", opening);
   } else {
-    sidebar.classList.toggle("collapsed");
+    const opening = sidebar.classList.contains("collapsed");
+    sidebar.classList.toggle("collapsed", !opening);
+    sidebar.classList.toggle("history-open", opening);
   }
+});
+
+document.addEventListener("click", event => {
+  const sidebar = document.querySelector(".sidebar");
+  if (!sidebar.classList.contains("history-open")) return;
+  if (sidebar.contains(event.target) || event.target.closest("#menuBtn")) return;
+  closeHistoryPanel();
 });
 
 document.getElementById("settingsOpen").addEventListener("click", openSettings);
