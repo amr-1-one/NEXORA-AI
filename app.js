@@ -436,8 +436,8 @@ function getLatestAssistantText() {
   if (!latest) return "";
   return latest.text
     .replace(/```[\s\S]*?```/g, " تم عرض كود في الرد. ")
-    .replace(/![([^]]*)]([^)]+)/g, "$1")
-    .replace(/[([^]]+)]([^)]+)/g, "$1")
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
     .replace(/[#>*_`~]/g, " ")
     .replace(/https?:\/\/\S+/g, " رابط ")
     .replace(/\s+/g, " ")
