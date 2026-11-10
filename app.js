@@ -527,6 +527,13 @@ function speakAssistantMessage(message, button) {
 
     const voice = voices.find(v => v.lang.toLowerCase() === lang.toLowerCase())
       || voices.find(v => v.lang.toLowerCase().startsWith(isArabic ? "ar" : "en"));
+
+    // Never use an English voice to pronounce Arabic text; it produces garbled speech.
+    if (isArabic && !voice) {
+      finish();
+      micStatus.textContent = "مفيش صوت عربي متاح في المتصفح. فعّل صوتًا عربيًا من إعدادات Windows ثم أعد المحاولة.";
+      return;
+    }
     if (voice) utterance.voice = voice;
 
     utterance.onend = () => {
