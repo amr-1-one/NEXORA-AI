@@ -431,33 +431,131 @@ function makeCopyButton(text, label) {
 }
 
 let activeSpeakButton = null;
-function speakAssistantMessage(message, button) {
-  if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) { micStatus.textContent = "تشغيل الصوت غير مدعوم في المتصفح ده."; return; }
-  if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
-    window.speechSynthesis.cancel();
-    if (activeSpeakButton) activeSpeakButton.classList.remove("speaking");
-    if (activeSpeakButton === button) { activeSpeakButton = null; return; }
-  }
-  const textToRead = String(message?.text || "")
-    .replace(/\x60\x60\x60[\s\S]*?\x60\x60\x60/g, " ")
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-    .replace(/https?:\/\/\S+/g, " ").replace(/[#>*_~]/g, " ").replace(/\s+/g, " ").trim();
-  if (!textToRead) { micStatus.textContent = "الرد ده مفيهوش نص أقدر أقراه."; return; }
-  const utterance = new SpeechSynthesisUtterance(textToRead);
-  utterance.lang = preferences.language === "en" ? "en-US" : "ar-EG"; utterance.rate = 1; utterance.pitch = 1;
-  const voices = window.speechSynthesis.getVoices();
-  const preferredVoice = voices.find(v => v.lang.toLowerCase() === utterance.lang.toLowerCase()) || voices.find(v => v.lang.toLowerCase().startsWith(preferences.language === "en" ? "en" : "ar"));
-  if (preferredVoice) utterance.voice = preferredVoice;
-  activeSpeakButton = button; button.classList.add("speaking");
-  utterance.onend = utterance.onerror = () => { button.classList.remove("speaking"); if (activeSpeakButton === button) activeSpeakButton = null; };
-  window.speechSynthesis.cancel(); window.speechSynthesis.speak(utterance);
+let speechRunId = 0;
+
+function cleanTextForSpeech(value) {
+  return String(value || "")
+    .replace(/```[\\s\\S]*?```/g, " ")
+    .replace(/!\\[([^\\]]*)\\]\\([^)]+\\)/g, "$1")
+    .replace(/\\[([^\\]]+)\\]\\([^)]+\\)/g, "$1")
+    .replace(/https?:\\/\\/\\S+/gi, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/【[^】]*】/g, " ")
+    .replace(/^\\s{0,3}#{1,6}\\s*/gm, "")
+    .replace(/\\b(?:https?|www)\\S+/gi, " ")
+    .replace(/[|*_~>#]/g, " ")
+    .replace(/\\s+/g, " ")
+    .trim();
 }
+
+function splitSpeechText(text, maxLength = 180) {
+  const sentences = text.match(/[^.!?؟。]+[.!?؟。]*/g) || [text];
+  const chunks = [];
+  let current = "";
+
+  for (const sentence of sentences) {
+    const words = sentence.trim().split(/\\s+/);
+    for (const word of words) {
+      if (!word) continue;
+      const candidate = current ? current + " " + word : word;
+      if (candidate.length > maxLength && current) {
+        chunks.push(current);
+        current = word;
+      } else {
+        current = candidate;
+      }
+    }
+    if (current && /[.!?؟。]$/.test(sentence.trim())) {
+      chunks.push(current);
+      current = "";
+    }
+  }
+  if (current) chunks.push(current);
+  return chunks.filter(Boolean);
+}
+
+function speakAssistantMessage(message, button) {
+  if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
+    micStatus.textContent = "تشغيل الصوت غير مدعوم في المتصفح ده.";
+    return;
+  }
+
+  if (activeSpeakButton === button && window.speechSynthesis.speaking) {
+    speechRunId++;
+    window.speechSynthesis.cancel();
+    button.classList.remove("speaking");
+    activeSpeakButton = null;
+    return;
+  }
+
+  speechRunId++;
+  const thisRun = speechRunId;
+  window.speechSynthesis.cancel();
+  if (activeSpeakButton) activeSpeakButton.classList.remove("speaking");
+  activeSpeakButton = null;
+
+  const textToRead = cleanTextForSpeech(message?.text);
+  if (!textToRead) {
+    micStatus.textContent = "الرد ده مفيهوش نص أقدر أقراه.";
+    return;
+  }
+
+  const chunks = splitSpeechText(textToRead);
+  const voices = window.speechSynthesis.getVoices();
+  let index = 0;
+  activeSpeakButton = button;
+  button.classList.add("speaking");
+
+  const finish = () => {
+    if (thisRun !== speechRunId) return;
+    button.classList.remove("speaking");
+    if (activeSpeakButton === button) activeSpeakButton = null;
+  };
+
+  const speakNext = () => {
+    if (thisRun !== speechRunId) return;
+    if (index >= chunks.length) {
+      finish();
+      return;
+    }
+
+    const chunk = chunks[index++];
+    const isArabic = /[\\u0600-\\u06FF]/.test(chunk);
+    const lang = isArabic ? "ar-EG" : "en-US";
+    const utterance = new SpeechSynthesisUtterance(chunk);
+    utterance.lang = lang;
+    utterance.rate = 0.92;
+    utterance.pitch = 1;
+
+    const voice = voices.find(v => v.lang.toLowerCase() === lang.toLowerCase())
+      || voices.find(v => v.lang.toLowerCase().startsWith(isArabic ? "ar" : "en"));
+    if (voice) utterance.voice = voice;
+
+    utterance.onend = () => {
+      if (thisRun === speechRunId) setTimeout(speakNext, 90);
+    };
+    utterance.onerror = () => {
+      if (thisRun === speechRunId) setTimeout(speakNext, 90);
+    };
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // A short delay after cancel avoids a Chrome speech queue race.
+  setTimeout(() => {
+    if (thisRun === speechRunId) speakNext();
+  }, 120);
+}
+
 function makeSpeakButton(message) {
-  const button = document.createElement("button"); button.type = "button";
-  button.className = "message-copy-btn message-speak-btn"; button.title = "قراءة الرد بصوت"; button.setAttribute("aria-label", button.title);
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "message-copy-btn message-speak-btn";
+  button.title = "قراءة الرد بصوت";
+  button.setAttribute("aria-label", button.title);
   button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
-  button.addEventListener("click", () => speakAssistantMessage(message, button)); return button;
+  button.addEventListener("click", () => speakAssistantMessage(message, button));
+  return button;
 }
 function renderAssistantContent(bubble, message) {
   const raw = message.text || "";
