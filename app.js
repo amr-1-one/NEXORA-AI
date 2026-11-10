@@ -431,115 +431,120 @@ function makeCopyButton(text, label) {
 }
 
 let activeSpeakButton = null;
+let activeSpeechAudio = null;
+let activeSpeechUrl = null;
 let speechRunId = 0;
 
 function cleanTextForSpeech(value) {
-  const codeFence = new RegExp("\x60{3}[\\s\\S]*?\x60{3}", "g");
+  const codeFence = new RegExp("\\x60{3}[\\s\\S]*?\\x60{3}", "g");
   return String(value || "")
     .replace(codeFence, " ")
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-    .replace(/https?:\/\/\S+/gi, " ")
+    .replace(/!\\[([^\\]]*)\\]\\([^)]+\\)/g, "$1")
+    .replace(/\\[([^\\]]+)\\]\\([^)]+\\)/g, "$1")
+    .replace(/https?:\\/\\/\\S+/gi, " ")
     .replace(/<[^>]*>/g, " ")
     .replace(/【[^】]*】/g, " ")
-    .replace(/^\s{0,3}#{1,6}\s*/gm, "")
-    .replace(/\b(?:https?|www)\S+/gi, " ")
+    .replace(/^\\s{0,3}#{1,6}\\s*/gm, "")
+    .replace(/\\b(?:https?|www)\\S+/gi, " ")
     .replace(/[|*_~>#]/g, " ")
-    .replace(/\s+/g, " ")
+    .replace(/\\s+/g, " ")
     .trim();
 }
 
-function speakAssistantMessage(message, button) {
-  if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
-    micStatus.textContent = "تشغيل الصوت غير مدعوم في المتصفح ده.";
-    return;
+function stopAssistantSpeech() {
+  if (activeSpeechAudio) {
+    activeSpeechAudio.pause();
+    activeSpeechAudio.removeAttribute("src");
+    activeSpeechAudio.load();
+    activeSpeechAudio = null;
   }
+  if (activeSpeechUrl) {
+    URL.revokeObjectURL(activeSpeechUrl);
+    activeSpeechUrl = null;
+  }
+  if (activeSpeakButton) activeSpeakButton.classList.remove("speaking");
+  activeSpeakButton = null;
+}
 
-  if (activeSpeakButton === button && (window.speechSynthesis.speaking || window.speechSynthesis.pending)) {
+async function speakAssistantMessage(message, button) {
+  if (activeSpeakButton === button && activeSpeechAudio) {
     speechRunId++;
-    window.speechSynthesis.cancel();
-    button.classList.remove("speaking");
-    activeSpeakButton = null;
+    stopAssistantSpeech();
+    micStatus.textContent = "";
     return;
   }
 
   speechRunId++;
   const thisRun = speechRunId;
-  window.speechSynthesis.cancel();
-  if (activeSpeakButton) activeSpeakButton.classList.remove("speaking");
+  stopAssistantSpeech();
 
   const textToRead = cleanTextForSpeech(message?.text);
   if (!textToRead) {
-    activeSpeakButton = null;
-    micStatus.textContent = "الرد ده مفيهوش نص أقدر أقراه.";
+    micStatus.textContent = preferences.language === "en"
+      ? "There is no text to read."
+      : "الرد ده مفيهوش نص أقدر أقراه.";
+    return;
+  }
+  if (textToRead.length > 5000) {
+    micStatus.textContent = preferences.language === "en"
+      ? "This answer is too long to read at once. Try a shorter answer."
+      : "الرد طويل جدًا للقراءة مرة واحدة. اطلب تلخيصه أو تقسيمه.";
     return;
   }
 
-  // One utterance avoids Chrome queue gaps and dropped chunks for normal answers.
-  const chunks = [];
-  for (let i = 0; i < textToRead.length; i += 2800) chunks.push(textToRead.slice(i, i + 2800));
-  let index = 0;
-  let started = false;
   activeSpeakButton = button;
   button.classList.add("speaking");
+  button.title = preferences.language === "en" ? "Preparing audio…" : "جاري تجهيز الصوت…";
+  micStatus.textContent = preferences.language === "en" ? "Preparing audio…" : "جاري تجهيز الصوت…";
 
   const finish = (errorMessage = "") => {
     if (thisRun !== speechRunId) return;
-    button.classList.remove("speaking");
-    if (activeSpeakButton === button) activeSpeakButton = null;
-    if (errorMessage) {
-      micStatus.textContent = errorMessage;
-      button.title = errorMessage;
-    }
+    stopAssistantSpeech();
+    button.title = preferences.language === "en" ? "Read answer aloud" : "قراءة الرد بصوت";
+    if (errorMessage) micStatus.textContent = errorMessage;
+    else micStatus.textContent = "";
   };
 
-  const speakNext = () => {
+  try {
+    const response = await fetch(API_URL + "/api/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: textToRead })
+    });
+
     if (thisRun !== speechRunId) return;
-    if (index >= chunks.length) return finish();
 
-    const chunk = chunks[index++];
-    const isArabic = /[\u0600-\u06FF]/.test(chunk);
-    const lang = isArabic ? "ar-EG" : "en-US";
-    const utterance = new SpeechSynthesisUtterance(chunk);
-    utterance.lang = lang;
-    utterance.rate = 1;
-    utterance.pitch = 1;
-
-    const voices = window.speechSynthesis.getVoices();
-    // Some devices report Arabic as "ar" (without a region such as "ar-EG").
-    // Match both "ar" and regional tags like "ar-SA" or "ar-EG".
-    const voice = isArabic
-      ? (voices.find(v => /^ar-eg$/i.test(v.lang))
-        || voices.find(v => /^ar(?:-|$)/i.test(v.lang)))
-      : (voices.find(v => v.lang.toLowerCase() === lang.toLowerCase())
-        || voices.find(v => /^en(?:-|$)/i.test(v.lang)));
-    if (voice) {
-      utterance.voice = voice;
-      utterance.lang = voice.lang;
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || (preferences.language === "en"
+        ? "Audio generation failed."
+        : "تعذّر إنشاء الصوت."));
     }
 
-    utterance.onstart = () => { started = true; };
-    utterance.onend = () => {
-      if (thisRun === speechRunId) setTimeout(speakNext, 60);
-    };
-    utterance.onerror = (event) => {
-      if (thisRun !== speechRunId) return;
-      const reason = event.error || "unknown";
-      finish("المتصفح وقف القراءة (" + reason + "). جرّب تفعيل صوت عربي من إعدادات Windows.");
-    };
+    const audioBlob = await response.blob();
+    if (!audioBlob.size) throw new Error(preferences.language === "en"
+      ? "The audio response was empty."
+      : "ملف الصوت وصل فارغ.");
 
-    try {
-      window.speechSynthesis.resume();
-      window.speechSynthesis.speak(utterance);
-    } catch (error) {
-      finish("تعذّر تشغيل الصوت: " + error.message);
+    if (thisRun !== speechRunId) return;
+
+    activeSpeechUrl = URL.createObjectURL(audioBlob);
+    activeSpeechAudio = new Audio(activeSpeechUrl);
+    activeSpeechAudio.preload = "auto";
+    activeSpeechAudio.onended = () => finish();
+    activeSpeechAudio.onerror = () => finish(preferences.language === "en"
+      ? "Could not play the generated audio."
+      : "تعذّر تشغيل الملف الصوتي.");
+
+    await activeSpeechAudio.play();
+    if (thisRun === speechRunId) {
+      button.title = preferences.language === "en" ? "Stop reading" : "إيقاف القراءة";
+      micStatus.textContent = "";
     }
-  };
-
-  // Chrome may ignore speak() immediately after cancel(); wait briefly.
-  setTimeout(() => {
-    if (thisRun === speechRunId) speakNext();
-  }, 250);
+  } catch (error) {
+    finish((preferences.language === "en" ? "Audio error: " : "مشكلة في الصوت: ") +
+      (error?.message || "Unknown error"));
+  }
 }
 
 function makeSpeakButton(message) {
