@@ -439,15 +439,15 @@ function cleanTextForSpeech(value) {
   const codeFence = new RegExp("\\x60{3}[\\s\\S]*?\\x60{3}", "g");
   return String(value || "")
     .replace(codeFence, " ")
-    .replace(/!\\[([^\\]]*)\\]\\([^)]+\\)/g, "$1")
-    .replace(/\\[([^\\]]+)\\]\\([^)]+\\)/g, "$1")
-    .replace(/https?:\\/\\/\\S+/gi, " ")
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/https?:\/\/\S+/gi, " ")
     .replace(/<[^>]*>/g, " ")
     .replace(/【[^】]*】/g, " ")
-    .replace(/^\\s{0,3}#{1,6}\\s*/gm, "")
-    .replace(/\\b(?:https?|www)\\S+/gi, " ")
+    .replace(/^\s{0,3}#{1,6}\s*/gm, "")
+    .replace(/\b(?:https?|www)\S+/gi, " ")
     .replace(/[|*_~>#]/g, " ")
-    .replace(/\\s+/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
