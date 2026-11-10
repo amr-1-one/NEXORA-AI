@@ -1108,3 +1108,48 @@ body { font-size: 14px; }
   .code-block code { font-size: 11px; }
   .message-copy-btn { min-height: 27px; font-size: 10px; }
 }
+
+
+/* Free browser text-to-speech control */
+.voice-controls {
+  display: flex;
+  flex: 0 0 40px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+.voice-controls .mic-btn,
+.voice-controls .speak-btn {
+  width: 36px;
+  height: 30px;
+  flex: 0 0 30px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: #f8f6ff;
+  color: var(--purple-dark);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  transition: .2s;
+}
+.voice-controls .speak-btn { font-size: 15px; }
+.voice-controls .mic-btn:hover,
+.voice-controls .speak-btn:hover,
+.voice-controls .speak-btn.speaking {
+  background: var(--purple-light);
+  border-color: var(--purple);
+}
+:root[data-theme="dark"] .voice-controls .mic-btn,
+:root[data-theme="dark"] .voice-controls .speak-btn {
+  background: #292938;
+  color: #eeeafa;
+  border-color: #3b3b4d;
+}
+@media(max-width:760px) {
+  .voice-controls { flex-basis: 34px; }
+  .voice-controls .mic-btn,
+  .voice-controls .speak-btn { width: 32px; height: 27px; flex-basis: 27px; border-radius: 9px; }
+}
