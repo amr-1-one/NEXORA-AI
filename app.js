@@ -9,7 +9,6 @@ const form = document.getElementById("chatForm");
 const input = document.getElementById("prompt");
 const sendBtn = document.getElementById("sendBtn");
 const micBtn = document.getElementById("micBtn");
-const speakBtn = document.getElementById("speakBtn");
 const fileInput = document.getElementById("fileInput");
 const attachBtn = document.getElementById("attachBtn");
 const attachmentList = document.getElementById("attachmentList");
