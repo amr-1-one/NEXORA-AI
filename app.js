@@ -338,10 +338,10 @@ async function saveNexoraMemory() {
 }
 function getNexoraMemoryContext() {
   if (!nexoraMemory.length) return "";
-  const facts = nexoraMemory.map((item, index) => (index + 1) + ". " + item).join("\\n");
+  const facts = nexoraMemory.map((item, index) => (index + 1) + ". " + item).join("\n");
   return preferences.language === "en"
-    ? "\\n\\n[Saved user memory — use these facts only when relevant, do not invent details, and do not repeat the list unless asked:\\n" + facts + "]"
-    : "\\n\\n[ذاكرة محفوظة عن المستخدم — استخدم هذه المعلومات فقط عندما تكون ذات صلة، ولا تخترع معلومات إضافية، ولا تسرد الذاكرة إلا إذا طُلب منك ذلك:\\n" + facts + "]";
+    ? "\n\n[Saved user memory — use these facts only when relevant, do not invent details, and do not repeat the list unless asked:\n" + facts + "]"
+    : "\n\n[ذاكرة محفوظة عن المستخدم — استخدم هذه المعلومات فقط عندما تكون ذات صلة، ولا تخترع معلومات إضافية، ولا تسرد الذاكرة إلا إذا طُلب منك ذلك:\n" + facts + "]";
 }
 function extractExplicitMemory(text) {
   const value = String(text || "").trim();
