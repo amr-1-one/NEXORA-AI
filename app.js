@@ -9,6 +9,10 @@ const form = document.getElementById("chatForm");
 const input = document.getElementById("prompt");
 const sendBtn = document.getElementById("sendBtn");
 const micBtn = document.getElementById("micBtn");
+const fileInput = document.getElementById("fileInput");
+const attachBtn = document.getElementById("attachBtn");
+const attachmentList = document.getElementById("attachmentList");
+let selectedFiles = [];
 const micStatus = document.getElementById("micStatus");
 const messagesEl = document.getElementById("messages");
 const welcome = document.getElementById("welcome");
@@ -389,8 +393,8 @@ function renderHistory() {
   });
 }
 
-function addMessage(role, text) {
-  messages.push({ role, text });
+function addMessage(role, text, displayText = text) {
+  messages.push({ role, text, displayText });
   renderMessages();
 }
 
@@ -408,7 +412,7 @@ function renderMessages() {
 
     const bubble = document.createElement("div");
     bubble.className = "bubble";
-    bubble.textContent = message.text;
+    bubble.textContent = message.displayText || message.text;
 
     row.append(avatar, bubble);
     messagesEl.appendChild(row);
@@ -502,15 +506,39 @@ function getResponseLengthInstruction() {
 }
 
 async function sendMessage(text) {
-  const clean = text.trim();
-  if (!clean || sendBtn.disabled || isTyping) return;
+  let clean = text.trim();
+  if ((!clean && !selectedFiles.length) || sendBtn.disabled || isTyping) return;
+
+  let attachmentContext = "";
+  let visibleAttachmentNames = [];
+  if (selectedFiles.length) {
+    try {
+      const extracted = [];
+      for (const file of selectedFiles) {
+        const content = await extractAttachmentText(file);
+        extracted.push("محتوى الملف " + file.name + ":\\n" + content.slice(0, 20000));
+        visibleAttachmentNames.push(file.name);
+      }
+      attachmentContext = extracted.join("\\n\\n");
+      renderSelectedFiles();
+      selectedFiles = [];
+      renderSelectedFiles();
+    } catch (error) {
+      alert("تعذّر قراءة الملف: " + error.message);
+      return;
+    }
+  }
+
+  const fullMessage = [clean, attachmentContext].filter(Boolean).join("\\n\\n");
+  const displayMessage = [clean, visibleAttachmentNames.length ? "📎 " + visibleAttachmentNames.join("، ") : ""].filter(Boolean).join("\\n");
+  clean = fullMessage;
 
   if (!API_URL.startsWith("https://")) {
     alert("تأكد من رابط Cloudflare Worker.");
     return;
   }
 
-  addMessage("user", clean);
+  addMessage("user", clean, displayMessage || clean);
   input.value = "";
   input.style.height = "auto";
   sendBtn.disabled = true;
@@ -587,6 +615,108 @@ async function sendMessage(text) {
     input.focus();
   }
 }
+
+
+function loadExternalScript(src) {
+  return new Promise((resolve, reject) => {
+    const existing = [...document.scripts].find(script => script.src === src);
+    if (existing) {
+      if (existing.dataset.loaded === "true") return resolve();
+      existing.addEventListener("load", resolve, { once: true });
+      existing.addEventListener("error", reject, { once: true });
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = src;
+    script.onload = () => { script.dataset.loaded = "true"; resolve(); };
+    script.onerror = () => reject(new Error("فشل تحميل أداة قراءة الملف"));
+    document.head.appendChild(script);
+  });
+}
+
+async function extractAttachmentText(file) {
+  const maxSize = 10 * 1024 * 1024;
+  if (file.size > maxSize) throw new Error("حجم الملف أكبر من 10 ميجابايت.");
+  const name = file.name.toLowerCase();
+
+  if (file.type === "text/plain" || name.endsWith(".txt")) {
+    const text = await file.text();
+    if (!text.trim()) throw new Error("الملف النصي فارغ.");
+    return text;
+  }
+
+  if (file.type === "application/pdf" || name.endsWith(".pdf")) {
+    await loadExternalScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js");
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+    const pages = [];
+    for (let pageNumber = 1; pageNumber <= Math.min(pdf.numPages, 25); pageNumber++) {
+      const page = await pdf.getPage(pageNumber);
+      const content = await page.getTextContent();
+      pages.push(content.items.map(item => item.str).join(" "));
+    }
+    const text = pages.join("\\n");
+    if (!text.trim()) throw new Error("لم أجد نصًا قابلًا للاستخراج داخل PDF.");
+    return text;
+  }
+
+  if (name.endsWith(".docx")) {
+    await loadExternalScript("https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js");
+    const result = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+    if (!result.value.trim()) throw new Error("ملف Word لا يحتوي على نص قابل للقراءة.");
+    return result.value;
+  }
+
+  if (file.type.startsWith("image/")) {
+    await loadExternalScript("https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js");
+    const result = await Tesseract.recognize(file, "ara+eng");
+    if (!result.data.text.trim()) throw new Error("لم أتمكن من قراءة نص واضح في الصورة.");
+    return "النص المستخرج من الصورة (OCR):\\n" + result.data.text;
+  }
+
+  throw new Error("الأنواع المدعومة: PDF وWord وTXT والصور.");
+}
+
+function renderSelectedFiles() {
+  attachmentList.innerHTML = "";
+  selectedFiles.forEach((file, index) => {
+    const chip = document.createElement("div");
+    chip.className = "attachment-chip";
+    const name = document.createElement("span");
+    name.textContent = "📎 " + file.name;
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "×";
+    remove.setAttribute("aria-label", "إزالة الملف");
+    remove.addEventListener("click", () => {
+      selectedFiles.splice(index, 1);
+      renderSelectedFiles();
+    });
+    chip.append(name, remove);
+    attachmentList.appendChild(chip);
+  });
+  attachmentList.classList.toggle("has-files", selectedFiles.length > 0);
+}
+
+attachBtn.addEventListener("click", () => fileInput.click());
+fileInput.addEventListener("change", () => {
+  const incoming = [...fileInput.files];
+  for (const file of incoming) {
+    if (selectedFiles.length >= 3) {
+      alert("يمكنك إرفاق 3 ملفات كحد أقصى في الرسالة الواحدة.");
+      break;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      alert("الحد الأقصى لحجم الملف الواحد 10 ميجابايت: " + file.name);
+      continue;
+    }
+    if (!selectedFiles.some(existing => existing.name === file.name && existing.size === file.size)) {
+      selectedFiles.push(file);
+    }
+  }
+  fileInput.value = "";
+  renderSelectedFiles();
+});
 
 form.addEventListener("submit", event => {
   event.preventDefault();
