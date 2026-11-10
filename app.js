@@ -431,77 +431,35 @@ function makeCopyButton(text, label) {
   return button;
 }
 
-function getLatestAssistantText() {
-  const latest = [...messages].reverse().find(message => message.role === "assistant" && message.text);
-  if (!latest) return "";
-  return latest.text
-    .replace(/```[\s\S]*?```/g, " تم عرض كود في الرد. ")
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-    .replace(/[#>*_`~]/g, " ")
-    .replace(/https?:\/\/\S+/g, " رابط ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function setSpeakButtonState(speaking) {
-  if (!speakBtn) return;
-  speakBtn.textContent = speaking ? "⏹️" : "🔊";
-  const label = preferences.language === "en"
-    ? (speaking ? "Stop reading" : "Read latest answer aloud")
-    : (speaking ? "إيقاف القراءة" : "قراءة آخر رد بصوت");
-  speakBtn.title = label;
-  speakBtn.setAttribute("aria-label", label);
-  speakBtn.classList.toggle("speaking", speaking);
-}
-
-function speakLatestAssistant() {
-  if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
-    micStatus.textContent = preferences.language === "en"
-      ? "Speech playback is not supported in this browser."
-      : "تشغيل الصوت غير مدعوم في المتصفح ده.";
-    return;
-  }
-
+let activeSpeakButton = null;
+function speakAssistantMessage(message, button) {
+  if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) { micStatus.textContent = "تشغيل الصوت غير مدعوم في المتصفح ده."; return; }
   if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
     window.speechSynthesis.cancel();
-    setSpeakButtonState(false);
-    return;
+    if (activeSpeakButton) activeSpeakButton.classList.remove("speaking");
+    if (activeSpeakButton === button) { activeSpeakButton = null; return; }
   }
-
-  const textToRead = getLatestAssistantText();
-  if (!textToRead) {
-    micStatus.textContent = preferences.language === "en"
-      ? "There is no answer to read yet."
-      : "مفيش رد من NEXORA AI عشان أقراه لسه.";
-    return;
-  }
-
+  const textToRead = String(message?.text || "")
+    .replace(/\x60\x60\x60[\s\S]*?\x60\x60\x60/g, " ")
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/https?:\/\/\S+/g, " ").replace(/[#>*_~]/g, " ").replace(/\s+/g, " ").trim();
+  if (!textToRead) { micStatus.textContent = "الرد ده مفيهوش نص أقدر أقراه."; return; }
   const utterance = new SpeechSynthesisUtterance(textToRead);
-  utterance.lang = preferences.language === "en" ? "en-US" : "ar-EG";
-  utterance.rate = 1;
-  utterance.pitch = 1;
+  utterance.lang = preferences.language === "en" ? "en-US" : "ar-EG"; utterance.rate = 1; utterance.pitch = 1;
   const voices = window.speechSynthesis.getVoices();
-  const preferredVoice = voices.find(voice => voice.lang.toLowerCase() === utterance.lang.toLowerCase())
-    || voices.find(voice => voice.lang.toLowerCase().startsWith(preferences.language === "en" ? "en" : "ar"));
+  const preferredVoice = voices.find(v => v.lang.toLowerCase() === utterance.lang.toLowerCase()) || voices.find(v => v.lang.toLowerCase().startsWith(preferences.language === "en" ? "en" : "ar"));
   if (preferredVoice) utterance.voice = preferredVoice;
-
-  utterance.onstart = () => {
-    setSpeakButtonState(true);
-    micStatus.textContent = preferences.language === "en" ? "Reading the latest answer…" : "جاري قراءة آخر رد بصوت…";
-  };
-  utterance.onend = () => {
-    setSpeakButtonState(false);
-    micStatus.textContent = preferences.language === "en" ? "Finished reading." : "انتهت القراءة الصوتية.";
-  };
-  utterance.onerror = () => {
-    setSpeakButtonState(false);
-    micStatus.textContent = preferences.language === "en" ? "Could not play the voice. Try again." : "تعذّر تشغيل الصوت. حاول مرة تانية.";
-  };
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(utterance);
+  activeSpeakButton = button; button.classList.add("speaking");
+  utterance.onend = utterance.onerror = () => { button.classList.remove("speaking"); if (activeSpeakButton === button) activeSpeakButton = null; };
+  window.speechSynthesis.cancel(); window.speechSynthesis.speak(utterance);
 }
-
+function makeSpeakButton(message) {
+  const button = document.createElement("button"); button.type = "button";
+  button.className = "message-copy-btn message-speak-btn"; button.title = "قراءة الرد بصوت"; button.setAttribute("aria-label", button.title);
+  button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
+  button.addEventListener("click", () => speakAssistantMessage(message, button)); return button;
+}
 function renderAssistantContent(bubble, message) {
   const raw = message.text || "";
   const parts = raw.split(/```([\w+-]*)\n?([\s\S]*?)```/g);
@@ -542,7 +500,7 @@ function renderAssistantContent(bubble, message) {
 
   const actions = document.createElement("div");
   actions.className = "assistant-message-actions";
-  actions.appendChild(makeCopyButton(raw, preferences.language === "en" ? "Copy answer" : "نسخ الإجابة"));
+  actions.append(makeCopyButton(raw, preferences.language === "en" ? "Copy answer" : "نسخ الإجابة"), makeSpeakButton(message));
   bubble.appendChild(actions);
 
   if (message.imageDataUrl) {
@@ -1063,8 +1021,6 @@ function renderSpeechTranscript() {
   input.style.height = "auto";
   input.style.height = Math.min(input.scrollHeight, 180) + "px";
 }
-
-speakBtn.addEventListener("click", speakLatestAssistant);
 
 micBtn.addEventListener("click", () => {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
