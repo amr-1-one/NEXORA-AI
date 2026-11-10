@@ -86,7 +86,10 @@
           <input id="fileInput" class="hidden" type="file" accept=".pdf,.docx,.txt,image/png,image/jpeg,image/webp" multiple>
           <button id="attachBtn" class="attach-btn" type="button" aria-label="إرفاق ملف" title="إرفاق ملف">＋</button>
           <textarea id="prompt" rows="1" placeholder="اكتب رسالة إلى NEXORA AI..." aria-label="رسالتك"></textarea>
-          <button id="micBtn" class="mic-btn" type="button" aria-label="تسجيل صوتي" title="تسجيل صوتي">🎙️</button>
+          <div class="voice-controls">
+            <button id="micBtn" class="mic-btn" type="button" aria-label="تسجيل صوتي" title="تسجيل صوتي">🎙️</button>
+            <button id="speakBtn" class="speak-btn" type="button" aria-label="قراءة آخر رد بصوت" title="قراءة آخر رد بصوت">🔊</button>
+          </div>
           <button id="sendBtn" class="send-btn" type="submit">↑</button>
         </form>
         <div id="micStatus" class="mic-status" role="status" aria-live="polite"></div>
