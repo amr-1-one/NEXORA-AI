@@ -967,3 +967,54 @@ body { font-size: 14px; }
   .send-btn, .mic-btn { width: 34px; height: 34px; flex-basis: 34px; }
   .attachment-chip { font-size: 10px; }
 }
+
+
+/* Image editing results and balanced attachment control */
+.attach-btn {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  align-self: flex-end;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: #f8f6ff;
+  color: var(--purple-dark);
+  font-size: 25px;
+  line-height: 1;
+  transition: .2s;
+}
+.attach-btn:hover {
+  background: var(--purple-light);
+  border-color: var(--purple);
+  color: var(--purple-dark);
+}
+.chat-generated-image {
+  display: block;
+  width: auto;
+  max-width: min(100%, 560px);
+  max-height: 560px;
+  margin-top: 10px;
+  border-radius: 14px;
+  object-fit: contain;
+  background: #fff;
+}
+:root[data-theme="dark"] .attach-btn {
+  background: #292938;
+  color: #eeeafa;
+  border-color: #3b3b4d;
+}
+@media (max-width: 760px) {
+  .attach-btn {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+    border-radius: 11px;
+    font-size: 23px;
+  }
+  .chat-generated-image {
+    max-width: 100%;
+    max-height: 420px;
+  }
+}
