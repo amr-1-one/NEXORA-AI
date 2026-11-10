@@ -124,6 +124,10 @@ function applyPreferences() {
     else if (selector === ".welcome h1") element.innerHTML = isEnglish ? 'Welcome to <span>NEXORA AI</span>' : 'أهلاً بك في <span>NEXORA AI</span>';
     else element.textContent = value;
   });
+  const chatSearch = document.getElementById("chatSearch");
+  if (chatSearch) chatSearch.placeholder = isEnglish ? "Search your conversations..." : "ابحث في محادثاتك...";
+  const createFolder = document.getElementById("createFolderBtn");
+  if (createFolder) createFolder.textContent = isEnglish ? "＋ New folder" : "＋ مجلد جديد";
   document.querySelectorAll(".suggestion").forEach((button, index) => {
     const en = ["💡 Explain a topic", "⌨️ Write some code", "📚 Help me study", "🚀 Suggest ideas"];
     const ar = ["💡 اشرح لي موضوعًا", "⌨️ اكتب لي كودًا", "📚 ساعدني في المذاكرة", "🚀 اقترح أفكارًا"];
@@ -238,6 +242,65 @@ function updateProfile() {
   }
 }
 
+
+let chatOrganization={folders:[],pinnedIds:[],folderByChat:{},titleOverrides:{}};
+let activeFolderFilter="all",chatSearchQuery="";
+function normalizeChatOrganization(value){
+ const d=value&&typeof value==="object"?value:{};
+ return {folders:Array.isArray(d.folders)?[...new Set(d.folders.filter(x=>typeof x==="string"&&x.trim()))]:[],pinnedIds:Array.isArray(d.pinnedIds)?[...new Set(d.pinnedIds)]:[],folderByChat:d.folderByChat&&typeof d.folderByChat==="object"?d.folderByChat:{},titleOverrides:d.titleOverrides&&typeof d.titleOverrides==="object"?d.titleOverrides:{}};
+}
+function loadChatOrganization(){
+ activeFolderFilter="all";
+ if(currentUser)chatOrganization=normalizeChatOrganization(currentUser.user_metadata?.nexora_chat_organization);
+ else{try{chatOrganization=normalizeChatOrganization(JSON.parse(localStorage.getItem("nexora-chat-organization")||"{}"));}catch{chatOrganization=normalizeChatOrganization({});}}
+}
+async function saveChatOrganization(){
+ chatOrganization=normalizeChatOrganization(chatOrganization);
+ if(!currentUser){localStorage.setItem("nexora-chat-organization",JSON.stringify(chatOrganization));return;}
+ const {data,error}=await supabaseClient.auth.updateUser({data:{...(currentUser.user_metadata||{}),nexora_chat_organization:chatOrganization}});
+ if(error){console.error("Save chat organization error:",error);alert((preferences.language==="en"?"Could not save chat organization: ":"تعذّر حفظ تنظيم المحادثات: ")+error.message);return;}
+ if(data?.user)currentUser=data.user;
+}
+function chatTextMatches(chat,query){
+ if(!query)return true;
+ return [chat.title,...(chat.messages||[]).map(m=>m.text||"")].join(" ").toLocaleLowerCase().includes(query.toLocaleLowerCase());
+}
+function renderFolderFilters(){
+ const el=document.getElementById("folderFilters");if(!el)return;el.innerHTML="";
+ const en=preferences.language==="en";
+ [{id:"all",label:en?"All":"الكل"},...chatOrganization.folders.map(name=>({id:name,label:"📁 "+name}))].forEach(folder=>{
+  const b=document.createElement("button");b.type="button";b.className="folder-filter"+(activeFolderFilter===folder.id?" active":"");b.textContent=folder.label;
+  b.addEventListener("click",()=>{activeFolderFilter=folder.id;renderHistory();});el.appendChild(b);
+ });
+}
+async function createChatFolder(){
+ const en=preferences.language==="en",name=prompt(en?"Enter a folder name:":"اكتب اسم المجلد الجديد:");
+ if(!name||!name.trim())return;const clean=name.trim().slice(0,32);
+ if(chatOrganization.folders.some(x=>x.toLocaleLowerCase()===clean.toLocaleLowerCase())){alert(en?"This folder already exists.":"هذا المجلد موجود بالفعل.");return;}
+ chatOrganization.folders.push(clean);activeFolderFilter=clean;await saveChatOrganization();renderHistory();
+}
+async function renameConversation(id){
+ if(isTyping)return;const chat=conversations.find(x=>x.id===id);if(!chat)return;
+ const en=preferences.language==="en",value=prompt(en?"New conversation name:":"اكتب الاسم الجديد للمحادثة:",chat.title||"");
+ if(!value||!value.trim())return;const title=value.trim().slice(0,80);
+ chatOrganization.titleOverrides[id]=title;chat.title=title;
+ if(currentUser){const {error}=await supabaseClient.from("nexora_chats").update({title}).eq("id",id).eq("user_id",currentUser.id);if(error){alert((en?"Could not rename conversation: ":"تعذّر تغيير اسم المحادثة: ")+error.message);return;}}
+ else saveGuestChats();
+ await saveChatOrganization();renderHistory();
+}
+async function togglePinnedConversation(id){
+ const ids=new Set(chatOrganization.pinnedIds);if(ids.has(id))ids.delete(id);else ids.add(id);
+ chatOrganization.pinnedIds=[...ids];await saveChatOrganization();renderHistory();
+}
+async function moveConversationToFolder(id){
+ const en=preferences.language==="en",none=en?"No folder":"بدون مجلد";
+ const value=prompt((en?"Type a folder name, or ":"اكتب اسم المجلد، أو ")+none+":\n"+[none,...chatOrganization.folders].join("\n"),chatOrganization.folderByChat[id]||none);
+ if(value===null)return;const name=value.trim();
+ if(!name||name===none)delete chatOrganization.folderByChat[id];
+ else{const clean=name.slice(0,32);if(!chatOrganization.folders.includes(clean))chatOrganization.folders.push(clean);chatOrganization.folderByChat[id]=clean;}
+ await saveChatOrganization();renderHistory();
+}
+
 function readGuestChats() {
   try {
     return JSON.parse(localStorage.getItem("nexora-guest-chats") || "[]");
@@ -252,6 +315,7 @@ function saveGuestChats() {
 
 async function loadUserChats() {
   if (!currentUser) return;
+  loadChatOrganization();
 
   const { data, error } = await supabaseClient
     .from("nexora_chats")
@@ -267,7 +331,7 @@ async function loadUserChats() {
   } else {
     conversations = (data || []).map(chat => ({
       id: chat.id,
-      title: chat.title || "محادثة جديدة",
+      title: chatOrganization.titleOverrides[chat.id] || chat.title || "محادثة جديدة",
       messages: Array.isArray(chat.messages) ? chat.messages : [],
       updatedAt: new Date(chat.updated_at).getTime()
     }));
@@ -282,11 +346,13 @@ async function loadUserChats() {
 async function persistCurrent() {
   if (!messages.length) return;
 
-  const title = messages.find(message => message.role === "user")?.text.slice(0, 35) || "محادثة جديدة";
   const chatId = activeChatId || crypto.randomUUID();
   activeChatId = chatId;
-
+  const previousChat = conversations.find(item => item.id === chatId);
+  const generatedTitle = messages.find(message => message.role === "user")?.text.slice(0, 35) || "محادثة جديدة";
+  const title = chatOrganization.titleOverrides[chatId] || previousChat?.title || generatedTitle;
   const chat = {
+    ...(previousChat || {}),
     id: chatId,
     title,
     messages: messages.map(({ imageDataUrl, ...message }) => message),
@@ -346,6 +412,10 @@ async function deleteConversation(chatId) {
   }
 
   conversations = conversations.filter(item => item.id !== chatId);
+  chatOrganization.pinnedIds = chatOrganization.pinnedIds.filter(id => id !== chatId);
+  delete chatOrganization.folderByChat[chatId];
+  delete chatOrganization.titleOverrides[chatId];
+  await saveChatOrganization();
   if (!currentUser) saveGuestChats();
 
   if (activeChatId === chatId) {
@@ -357,40 +427,28 @@ async function deleteConversation(chatId) {
   renderHistory();
 }
 
-function renderHistory() {
-  historyEl.innerHTML = "";
-
-  conversations.forEach(chat => {
-    const row = document.createElement("div");
-    row.className = "history-row";
-
-    const button = document.createElement("button");
-    button.className = "history-item";
-    button.textContent = chat.title || "محادثة جديدة";
-    button.type = "button";
-
-    if (chat.id === activeChatId) button.classList.add("active");
-
-    button.addEventListener("click", () => {
-      if (isTyping) return;
-      activeChatId = chat.id;
-      messages = [...(chat.messages || [])];
-      renderMessages();
-      renderHistory();
-      closeHistoryPanel();
-    });
-
-    const deleteButton = document.createElement("button");
-    deleteButton.className = "history-delete";
-    deleteButton.type = "button";
-    deleteButton.textContent = "×";
-    deleteButton.title = preferences.language === "en" ? "Delete conversation" : "حذف المحادثة";
-    deleteButton.setAttribute("aria-label", deleteButton.title);
-    deleteButton.addEventListener("click", () => deleteConversation(chat.id));
-
-    row.append(button, deleteButton);
-    historyEl.appendChild(row);
-  });
+function renderHistory(){
+ historyEl.innerHTML="";renderFolderFilters();
+ const pinned=new Set(chatOrganization.pinnedIds);
+ const list=conversations.filter(c=>activeFolderFilter==="all"||chatOrganization.folderByChat[c.id]===activeFolderFilter)
+ .filter(c=>chatTextMatches(c,chatSearchQuery))
+ .sort((a,b)=>(Number(pinned.has(b.id))-Number(pinned.has(a.id)))||((b.updatedAt||0)-(a.updatedAt||0)));
+ if(!list.length){const e=document.createElement("div");e.className="history-empty";e.textContent=preferences.language==="en"?"No matching conversations.":"لا توجد محادثات مطابقة.";historyEl.appendChild(e);return;}
+ list.forEach(chat=>{
+  const row=document.createElement("div");row.className="history-row";
+  const open=document.createElement("button");open.className="history-item";open.type="button";open.textContent=(pinned.has(chat.id)?"📌 ":"")+(chat.title||(preferences.language==="en"?"New chat":"محادثة جديدة"));open.title=chat.title||"";
+  if(chat.id===activeChatId)open.classList.add("active");
+  open.addEventListener("click",()=>{if(isTyping)return;activeChatId=chat.id;messages=[...(chat.messages||[])];renderMessages();renderHistory();closeHistoryPanel();});
+  const actions=document.createElement("div");actions.className="history-actions";
+  const action=(symbol,title,handler,cls="history-action")=>{const b=document.createElement("button");b.type="button";b.className=cls;b.textContent=symbol;b.title=title;b.setAttribute("aria-label",title);b.addEventListener("click",handler);return b;};
+  actions.append(
+   action(pinned.has(chat.id)?"📌":"☆",preferences.language==="en"?(pinned.has(chat.id)?"Unpin":"Pin"):(pinned.has(chat.id)?"إلغاء التثبيت":"تثبيت"),()=>togglePinnedConversation(chat.id)),
+   action("✎",preferences.language==="en"?"Rename":"إعادة التسمية",()=>renameConversation(chat.id)),
+   action("📁",preferences.language==="en"?"Move to folder":"نقل إلى مجلد",()=>moveConversationToFolder(chat.id)),
+   action("×",preferences.language==="en"?"Delete conversation":"حذف المحادثة",()=>deleteConversation(chat.id),"history-delete")
+  );
+  row.append(open,actions);historyEl.appendChild(row);
+ });
 }
 
 function addMessage(role, text, displayText = text) {
@@ -1212,6 +1270,11 @@ document.querySelectorAll(".suggestion").forEach(button => {
   button.addEventListener("click", () => sendMessage(button.dataset.prompt));
 });
 
+const chatSearchInput=document.getElementById("chatSearch");
+if(chatSearchInput)chatSearchInput.addEventListener("input",()=>{chatSearchQuery=chatSearchInput.value.trim();renderHistory();});
+const createFolderButton=document.getElementById("createFolderBtn");
+if(createFolderButton)createFolderButton.addEventListener("click",createChatFolder);
+
 document.getElementById("newChat").addEventListener("click", () => {
   if (isTyping) return;
   messages = [];
@@ -1401,6 +1464,7 @@ supabaseClient.auth.onAuthStateChange(async (_event, session) => {
       await loadUserChats();
       closeAuthModal();
     } else {
+      loadChatOrganization();
       conversations = readGuestChats();
       messages = [];
       activeChatId = null;
@@ -1422,6 +1486,7 @@ async function initializeApp() {
   if (currentUser) {
     await loadUserChats();
   } else {
+    loadChatOrganization();
     conversations = readGuestChats();
     renderHistory();
     renderMessages();
