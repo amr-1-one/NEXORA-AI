@@ -1185,3 +1185,24 @@ body { font-size: 14px; }
   place-items: center;
   cursor: pointer;
 }
+
+
+/* ChatGPT-like microphone and read-aloud action beside each answer copy button */
+.voice-controls { display: contents !important; }
+.mic-btn {
+  width: 38px !important; height: 38px !important; flex: 0 0 38px !important;
+  display: grid !important; place-items: center; align-self: flex-end;
+  border: 0 !important; border-radius: 50% !important;
+  background: #f1f1f1 !important; color: #333 !important;
+  padding: 9px; cursor: pointer; transition: background .18s, color .18s;
+}
+.mic-btn svg, .message-speak-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.mic-btn:hover { background: #e7e7e7 !important; }
+.mic-btn.recording { background: #fee2e2 !important; color: #c62828 !important; animation: mic-pulse 1.2s infinite; }
+.message-speak-btn { width: 30px; min-width: 30px; padding: 4px; }
+.message-speak-btn svg { width: 17px; height: 17px; }
+.message-speak-btn.speaking { color: var(--purple-dark); background: var(--purple-light); border-color: var(--purple); }
+:root[data-theme="dark"] .mic-btn { background: #303030 !important; color: #f2f2f2 !important; }
+:root[data-theme="dark"] .mic-btn:hover { background: #414141 !important; }
+:root[data-theme="dark"] .mic-btn.recording { background: #482b38 !important; color: #ff9daf !important; }
+@media(max-width:760px) { .mic-btn { width: 34px !important; height: 34px !important; flex-basis: 34px !important; padding: 8px; } }
