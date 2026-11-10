@@ -1206,3 +1206,24 @@ body { font-size: 14px; }
 :root[data-theme="dark"] .mic-btn:hover { background: #414141 !important; }
 :root[data-theme="dark"] .mic-btn.recording { background: #482b38 !important; color: #ff9daf !important; }
 @media(max-width:760px) { .mic-btn { width: 34px !important; height: 34px !important; flex-basis: 34px !important; padding: 8px; } }
+
+
+/* Conversation organization */
+.history-tools{display:flex;flex-direction:column;gap:7px;margin:0 0 9px}
+.chat-search{width:100%;min-width:0;border:1px solid var(--border);border-radius:10px;padding:9px 10px;background:#fff;color:var(--text);outline:0;font-size:12px}
+.chat-search:focus{border-color:var(--purple);box-shadow:0 0 0 3px var(--purple-light)}
+.create-folder-btn{border:1px dashed #d8cff7;background:transparent;color:var(--purple-dark);border-radius:9px;padding:8px;font-size:11px;text-align:center}
+.create-folder-btn:hover{background:var(--purple-light)}
+.folder-filters{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 9px}
+.folder-filter{border:1px solid var(--border);background:#fff;color:#77778d;border-radius:20px;padding:5px 9px;font-size:10px;max-width:100%}
+.folder-filter.active{color:var(--purple-dark);border-color:var(--purple);background:var(--purple-light)}
+.history-row{gap:3px}
+.history-actions{display:flex;align-items:center;gap:1px;flex:0 0 auto}
+.history-action{width:25px;height:29px;border:0;border-radius:7px;padding:0;background:transparent;color:#8b849f;font-size:13px}
+.history-action:hover{background:var(--purple-light);color:var(--purple-dark)}
+.history-row .history-item{padding:9px 7px}
+.history-empty{padding:12px 7px;color:var(--muted);font-size:11px;text-align:center}
+:root[data-theme="dark"] .chat-search,:root[data-theme="dark"] .folder-filter{background:#292938;color:#eeeafa;border-color:#3b3b4d}
+:root[data-theme="dark"] .create-folder-btn{color:#d4c9ff;border-color:#51466f}
+:root[data-theme="dark"] .history-action{color:#c8c2d7}
+@media(max-width:760px){.history-action{width:27px}.history-actions{gap:1px}}
