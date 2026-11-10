@@ -520,6 +520,7 @@ async function sendMessage(text) {
   isTyping = true;
 
   let attachmentContext = "";
+  let imageAttachments = [];
   let visibleAttachmentNames = [];
   let waiting = null;
   let waitingBubble = null;
@@ -542,7 +543,20 @@ async function sendMessage(text) {
   if (selectedFiles.length) {
     try {
       const extracted = [];
+      let totalImageBytes = 0;
       for (const file of selectedFiles) {
+        const imageMimeType = getSupportedImageMimeType(file);
+        if (imageMimeType) {
+          totalImageBytes += file.size;
+          if (totalImageBytes > 12 * 1024 * 1024) {
+            throw new Error("إجمالي حجم الصور في الرسالة الواحدة يجب ألا يتجاوز 12 ميجابايت.");
+          }
+          imageAttachments.push({
+            mimeType: imageMimeType,
+            data: await fileToBase64(file),
+            name: file.name
+          });
+        }
         const content = await extractAttachmentText(file);
         extracted.push("محتوى الملف " + file.name + ":\\n" + content.slice(0, 20000));
         visibleAttachmentNames.push(file.name);
@@ -616,7 +630,8 @@ async function sendMessage(text) {
           text: message.text + (index === recentMessages.length - 1 && message.role !== "assistant"
             ? "\n\n" + getResponseLengthInstruction()
             : "")
-        }))
+        })),
+        images: imageAttachments
       })
     });
 
@@ -660,6 +675,30 @@ function loadExternalScript(src) {
   });
 }
 
+function getSupportedImageMimeType(file) {
+  const name = file.name.toLowerCase();
+  const mime = (file.type || "").toLowerCase();
+  const supported = ["image/jpeg", "image/png", "image/webp"];
+  if (mime.startsWith("image/") && !supported.includes(mime)) {
+    throw new Error("صيغة الصورة غير مدعومة. استخدم JPG أو PNG أو WebP.");
+  }
+  if (supported.includes(mime)) return mime;
+  if (/\\.(jpe?g)$/.test(name)) return "image/jpeg";
+  if (name.endsWith(".png")) return "image/png";
+  if (name.endsWith(".webp")) return "image/webp";
+  return null;
+}
+
+async function fileToBase64(file) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+  }
+  return btoa(binary);
+}
+
 async function extractAttachmentText(file) {
   const maxSize = 10 * 1024 * 1024;
   if (file.size > maxSize) throw new Error("حجم الملف أكبر من 10 ميجابايت.");
@@ -693,11 +732,17 @@ async function extractAttachmentText(file) {
     return result.value;
   }
 
-  if (file.type.startsWith("image/")) {
-    await loadExternalScript("https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js");
-    const result = await Tesseract.recognize(file, "ara+eng");
-    if (!result.data.text.trim()) throw new Error("لم أتمكن من قراءة نص واضح في الصورة.");
-    return "النص المستخرج من الصورة (OCR):\\n" + result.data.text;
+  if (file.type.startsWith("image/") || getSupportedImageMimeType(file)) {
+    try {
+      await loadExternalScript("https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js");
+      const result = await Tesseract.recognize(file, "ara+eng");
+      if (result.data.text.trim()) {
+        return "نص OCR مبدئي (قد يحتوي على أخطاء؛ افحص الصورة الأصلية أيضًا):\\n" + result.data.text;
+      }
+    } catch (error) {
+      console.warn("Image OCR unavailable; the original image will still be sent to vision model.", error);
+    }
+    return "تعذّر استخراج نص موثوق آليًا. افحص الصورة الأصلية بصريًا ولا تخمّن أي نص غير واضح.";
   }
 
   throw new Error("الأنواع المدعومة: PDF وWord وTXT والصور.");
