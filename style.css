@@ -912,3 +912,58 @@ textarea::placeholder {
   .disclaimer { padding-top: 4px; font-size: 9px; }
   .copyright { margin: 3px 0 0; font-size: 9px; }
 }
+
+/* ChatGPT-inspired compact typography and spacing */
+:root { font-size: 14px; }
+body { font-size: 14px; }
+.brand { gap: 9px; padding-bottom: 18px; }
+.brand b { font-size: 16px; }
+.side-label { margin: 19px 8px 7px; }
+.new-chat { padding: 10px; font-size: 13px; }
+.history-item { padding: 8px 9px; font-size: 11px; }
+.sidebar-bottom { padding-top: 11px; }
+.topbar { height: 58px; padding-inline: 20px; }
+.conversation { padding: 24px 24px 14px; }
+.welcome { padding: 18px 0 28px; }
+.welcome-icon { width: 54px; height: 54px; font-size: 29px; }
+.eyebrow { margin-top: 13px; font-size: 11px; }
+.welcome h1 { font-size: 26px; }
+.welcome p { font-size: 13px; margin-bottom: 20px; }
+.suggestions { gap: 8px; }
+.suggestion { padding: 11px 12px; font-size: 12px; }
+.messages { gap: 16px; }
+.bubble { padding: 11px 15px; font-size: 13px; line-height: 1.85; border-radius: 18px; }
+.composer-wrap { padding: 8px 0 13px; }
+.composer { gap: 8px; padding: 9px 11px; border-radius: 22px; }
+.composer textarea { font-size: 14px; }
+.attach-btn {
+  width: 36px; height: 36px; flex: 0 0 36px; border: 0; border-radius: 50%;
+  background: transparent; color: var(--muted); font-size: 24px; display: grid; place-items: center;
+}
+.attach-btn:hover { background: var(--purple-light); color: var(--purple-dark); }
+.attachment-list { display: none; flex-wrap: wrap; gap: 6px; margin-bottom: 7px; }
+.attachment-list.has-files { display: flex; }
+.attachment-chip {
+  display: flex; align-items: center; gap: 7px; max-width: 100%;
+  border: 1px solid var(--border); background: var(--surface, #fff);
+  border-radius: 12px; padding: 5px 8px; color: var(--text); font-size: 11px;
+}
+.attachment-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.attachment-chip button { border: 0; background: transparent; color: var(--muted); font-size: 17px; }
+:root[data-theme="dark"] .attach-btn { color: #ddd7ee; }
+:root[data-theme="dark"] .attachment-chip { background: #292938; border-color: #414154; }
+@media(max-width:760px) {
+  .topbar { height: 52px; min-height: 52px; flex-basis: 52px; }
+  .conversation { padding: 9px 9px 6px; }
+  .welcome { padding: 9px 0 14px; }
+  .welcome h1 { font-size: 19px; }
+  .welcome p { margin-bottom: 9px; }
+  .suggestion { min-height: 38px; padding: 7px; font-size: 10px; }
+  .messages { gap: 10px; }
+  .bubble { padding: 8px 11px; font-size: 12.5px; line-height: 1.75; }
+  .composer { gap: 4px; padding: 6px 7px; }
+  .composer textarea { font-size: 13px; }
+  .attach-btn { width: 32px; height: 32px; flex-basis: 32px; font-size: 22px; }
+  .send-btn, .mic-btn { width: 34px; height: 34px; flex-basis: 34px; }
+  .attachment-chip { font-size: 10px; }
+}
