@@ -289,7 +289,7 @@ async function persistCurrent() {
   const chat = {
     id: chatId,
     title,
-    messages: [...messages],
+    messages: messages.map(({ imageDataUrl, ...message }) => message),
     updatedAt: Date.now()
   };
 
@@ -413,6 +413,15 @@ function renderMessages() {
     const bubble = document.createElement("div");
     bubble.className = "bubble";
     bubble.textContent = message.displayText || message.text;
+    if (message.imageDataUrl) {
+      const image = document.createElement("img");
+      image.className = "chat-generated-image";
+      image.src = message.imageDataUrl;
+      image.alt = preferences.language === "en" ? "Edited image" : "الصورة بعد التعديل";
+      image.loading = "lazy";
+      bubble.appendChild(document.createElement("br"));
+      bubble.appendChild(image);
+    }
 
     row.append(avatar, bubble);
     messagesEl.appendChild(row);
@@ -451,6 +460,17 @@ function splitResponseIntoLines(text) {
   });
 
   return result;
+}
+
+function typeAssistantImageMessage(text, imageDataUrl) {
+  const message = { role: "assistant", text, imageDataUrl };
+  messages.push(message);
+  renderMessages();
+  persistCurrent();
+}
+
+function isImageEditRequest(prompt) {
+  return /(?:عدّل|عدل|تعديل|غيّر|غير|تغيير|شيل|احذف|امسح|ضيف|أضف|اضف|حط|خلّي|خلي|حوّل|حول|قص|حسّن|حسن|تحسين|زوّد|زود|استبدل|بدّل|بدل|غيّرلي|غيرلي|اعملها|خلّيها|خليها|edit|modify|change|remove|erase|add|replace|turn into|convert|enhance|improve|crop|background|color)/i.test(prompt || "");
 }
 
 function typeAssistantMessage(text) {
@@ -507,6 +527,7 @@ function getResponseLengthInstruction() {
 
 async function sendMessage(text) {
   let clean = text.trim();
+  const originalPrompt = clean;
   if ((!clean && !selectedFiles.length) || sendBtn.disabled || isTyping) return;
 
   if (!API_URL.startsWith("https://")) {
@@ -590,6 +611,61 @@ async function sendMessage(text) {
     if (waiting) waiting.remove();
     try {
       await typeAssistantMessage("أنا NEXORA AI، المساعد الذكي الذي طوّره AMR (Developer AMR). قد أستخدم نماذج وخدمات ذكاء اصطناعي من شركات أخرى لتشغيل بعض قدراتي، لكن مطوّر NEXORA AI وصاحب المشروع هو AMR.");
+    } finally {
+      sendBtn.disabled = false;
+      isTyping = false;
+      input.focus();
+    }
+    return;
+  }
+
+  // Route explicit image-edit requests to Gemini's image-generation model.
+  if (imageAttachments.length && isImageEditRequest(originalPrompt)) {
+    if (!waiting) {
+      waiting = document.createElement("div");
+      waiting.className = "message assistant";
+      const avatar = document.createElement("div");
+      avatar.className = "msg-avatar";
+      avatar.textContent = "✦";
+      waitingBubble = document.createElement("div");
+      waitingBubble.className = "bubble typing";
+      waiting.append(avatar, waitingBubble);
+      messagesEl.appendChild(waiting);
+    }
+    waitingBubble.textContent = "جارٍ تعديل الصورة... قد يستغرق ذلك بعض الوقت.";
+    scrollToBottom();
+
+    try {
+      const { data: sessionData } = await supabaseClient.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      const response = await fetch(API_URL + "/api/edit-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { "Authorization": "Bearer " + accessToken } : {})
+        },
+        body: JSON.stringify({
+          prompt: originalPrompt,
+          images: imageAttachments.map(({ mimeType, data }) => ({ mimeType, data }))
+        })
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "تعذّر تعديل الصورة: " + response.status);
+      if (!data.image?.data) throw new Error("الخادم لم يرجع صورة معدّلة.");
+
+      waiting.remove();
+      const mimeType = data.image.mimeType || "image/png";
+      const imageDataUrl = "data:" + mimeType + ";base64," + data.image.data;
+      await typeAssistantImageMessage(data.reply || "تم تعديل الصورة بنجاح.", imageDataUrl);
+
+      if (typeof data.moderationWarning === "string" && data.moderationWarning.trim()) {
+        alert(data.moderationWarning);
+      }
+    } catch (error) {
+      if (waiting) waiting.remove();
+      addMessage("assistant", "تعذّر تعديل الصورة: " + error.message);
+      await persistCurrent();
     } finally {
       sendBtn.disabled = false;
       isTyping = false;
