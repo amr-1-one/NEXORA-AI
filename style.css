@@ -1153,3 +1153,35 @@ body { font-size: 14px; }
   .voice-controls .mic-btn,
   .voice-controls .speak-btn { width: 32px; height: 27px; flex-basis: 27px; border-radius: 9px; }
 }
+
+
+/* Ensure the speaker control remains visible in the composer. */
+.voice-controls {
+  display: flex !important;
+  flex: 0 0 40px !important;
+  min-width: 40px;
+  min-height: 64px;
+  flex-direction: column !important;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  overflow: visible;
+}
+#speakBtn {
+  display: grid !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: static !important;
+  width: 36px !important;
+  height: 30px !important;
+  min-height: 30px;
+  flex: 0 0 30px !important;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #f8f6ff;
+  color: var(--purple-dark);
+  font-size: 16px;
+  line-height: 1;
+  place-items: center;
+  cursor: pointer;
+}
