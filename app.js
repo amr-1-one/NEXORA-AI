@@ -509,6 +509,16 @@ async function sendMessage(text) {
   let clean = text.trim();
   if ((!clean && !selectedFiles.length) || sendBtn.disabled || isTyping) return;
 
+  if (!API_URL.startsWith("https://")) {
+    alert("تأكد من رابط Cloudflare Worker.");
+    return;
+  }
+
+  // Lock immediately, including while files are being extracted.
+  // This prevents repeated clicks from sending the same attachment multiple times.
+  sendBtn.disabled = true;
+  isTyping = true;
+
   let attachmentContext = "";
   let visibleAttachmentNames = [];
   if (selectedFiles.length) {
@@ -525,6 +535,9 @@ async function sendMessage(text) {
       renderSelectedFiles();
     } catch (error) {
       alert("تعذّر قراءة الملف: " + error.message);
+      sendBtn.disabled = false;
+      isTyping = false;
+      input.focus();
       return;
     }
   }
@@ -533,16 +546,9 @@ async function sendMessage(text) {
   const displayMessage = [clean, visibleAttachmentNames.length ? "📎 " + visibleAttachmentNames.join("، ") : ""].filter(Boolean).join("\\n");
   clean = fullMessage;
 
-  if (!API_URL.startsWith("https://")) {
-    alert("تأكد من رابط Cloudflare Worker.");
-    return;
-  }
-
   addMessage("user", clean, displayMessage || clean);
   input.value = "";
   input.style.height = "auto";
-  sendBtn.disabled = true;
-  isTyping = true;
 
   // Official NEXORA AI developer attribution.
   const identityQuestion = /(?:مين|من|ما|ايه|ماهو|ما هي|what|who).{0,35}(?:صنعك|عملك|طورك|برمجك|أنشأك|مطورك|مؤسس|developer|created you|made you|built you)|(?:صنعك|عملك|طورك|برمجك|أنشأك|مطورك).{0,25}(?:مين|من|who|what)/i.test(clean);
