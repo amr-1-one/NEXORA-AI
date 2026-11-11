@@ -1307,3 +1307,69 @@ body { font-size: 14px; }
     flex-shrink: 0 !important;
   }
 }
+
+
+/* Message feedback: quiet, text-first outline controls */
+.assistant-feedback {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 8px;
+  color: #626273;
+  font-size: 11px;
+}
+.feedback-prompt { color: #777789; }
+.feedback-choice {
+  min-height: 27px;
+  padding: 4px 10px;
+  border: 1px solid #d9d9e3;
+  border-radius: 8px;
+  background: transparent;
+  color: #363644;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.feedback-choice:hover {
+  border-color: var(--purple);
+  background: var(--purple-light);
+  color: var(--purple-dark);
+}
+.feedback-choice:disabled { opacity: .55; cursor: wait; }
+.feedback-status { color: #626273; font-size: 11px; }
+.feedback-report-form {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 7px;
+  width: 100%;
+}
+.feedback-report-form textarea {
+  width: min(100%, 360px);
+  min-height: 54px;
+  padding: 8px 10px;
+  border: 1px solid #dedee8;
+  border-radius: 9px;
+  background: #fff;
+  color: #202033;
+  font: inherit;
+  font-size: 12px;
+  resize: vertical;
+}
+.feedback-submit { white-space: nowrap; }
+
+/* Keep conversation menu readable on its white surface in every theme */
+.history-actions {
+  background: #fff !important;
+  border-color: #e4e4ec !important;
+}
+.history-actions .history-action,
+:root[data-theme="dark"] .history-actions .history-action {
+  color: #111827 !important;
+}
+.history-actions .history-action:hover {
+  color: #111827 !important;
+  background: #f0edff !important;
+}
