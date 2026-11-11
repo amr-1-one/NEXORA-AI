@@ -1290,3 +1290,20 @@ body { font-size: 14px; }
 :root[data-theme="dark"] .stop-btn { background: #eee; color: #222; }
 :root[data-theme="dark"] .stop-btn:hover { background: #ff7185; color: #fff; }
 @media(max-width:760px) { .stop-btn { width: 34px; height: 34px; flex-basis: 34px; border-radius: 11px; } }
+
+
+/* Mobile fix: keep conversation options visible and tappable */
+@media (max-width: 760px) {
+  .history-menu-trigger {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    visibility: visible !important;
+    display: grid !important;
+  }
+
+  .history-menu-wrap {
+    opacity: 1 !important;
+    visibility: visible !important;
+    flex-shrink: 0 !important;
+  }
+}
