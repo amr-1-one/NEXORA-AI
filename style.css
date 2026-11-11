@@ -1277,3 +1277,16 @@ body { font-size: 14px; }
  .history-menu-trigger{opacity:.75;pointer-events:auto}
  .history-actions{min-width:165px}
 }
+
+
+/* Stop the current assistant response */
+.stop-btn {
+  width: 40px; height: 40px; flex: 0 0 40px; border: 0; border-radius: 13px;
+  display: grid; place-items: center; background: #252532; color: #fff;
+  font-size: 15px; cursor: pointer; transition: .18s ease;
+}
+.stop-btn:hover { background: #d9435b; transform: scale(1.04); }
+.stop-btn[hidden] { display: none !important; }
+:root[data-theme="dark"] .stop-btn { background: #eee; color: #222; }
+:root[data-theme="dark"] .stop-btn:hover { background: #ff7185; color: #fff; }
+@media(max-width:760px) { .stop-btn { width: 34px; height: 34px; flex-basis: 34px; border-radius: 11px; } }
