@@ -1373,3 +1373,29 @@ body { font-size: 14px; }
   color: #111827 !important;
   background: #f0edff !important;
 }
+
+
+/* Admin dashboard navigation */
+.admin-side-link {
+  display: block;
+  width: 100%;
+  margin-top: 9px;
+  padding: 10px 12px;
+  border: 1px solid #e5dfff;
+  border-radius: 9px;
+  background: var(--purple-light);
+  color: var(--purple-dark);
+  text-align: center;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 700;
+}
+.admin-side-link:hover {
+  border-color: var(--purple);
+  filter: brightness(.98);
+}
+:root[data-theme="dark"] .admin-side-link {
+  background: #292938;
+  color: #eeeafa;
+  border-color: #3b3b4d;
+}
