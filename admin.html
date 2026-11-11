@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title>لوحة إدارة NEXORA AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{font-family:Inter,"Noto Sans Arabic",sans-serif;color:#29263a;background:#f7f7fb;font-synthesis:none}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:#f7f7fb}
+    button,input{font:inherit}.page{max-width:1200px;margin:auto;padding:26px 20px 50px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:24px}
+    .brand{display:flex;align-items:center;gap:12px}.mark{width:46px;height:46px;border-radius:15px;background:linear-gradient(135deg,#9272ff,#6745dc);color:white;display:grid;place-items:center;font-size:25px}
+    h1{font-size:23px;margin:0}.sub{color:#858197;font-size:12px;margin-top:5px}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}button,.back{border:1px solid #e6e2f0;background:#fff;border-radius:10px;padding:10px 14px;color:#51418f;text-decoration:none;cursor:pointer;font-weight:700;font-size:12px}
+    button.primary{background:#7455e8;color:#fff;border-color:#7455e8}.status{padding:12px 15px;border-radius:12px;background:#fff;border:1px solid #e8e5f0;color:#68637a;font-size:13px;margin-bottom:17px}
+    .status.error{color:#b4233d;background:#fff5f6;border-color:#ffd5dc}.status.ok{color:#24734a;background:#f2fbf5;border-color:#d4f0dd}
+    .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin-bottom:18px}
+    .card{background:#fff;border:1px solid #ebe8f2;border-radius:16px;padding:17px;min-width:0}
+    .metric-label{color:#858197;font-size:12px}.metric{font-size:25px;font-weight:800;margin-top:9px;overflow-wrap:anywhere}.metric-note{font-size:10px;color:#9893a6;margin-top:5px}
+    .section{background:#fff;border:1px solid #ebe8f2;border-radius:16px;padding:18px;margin-top:15px}
+    .section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:13px}.section h2{font-size:16px;margin:0}
+    .search{max-width:280px;width:100%;border:1px solid #e6e2f0;border-radius:10px;padding:10px 12px;outline:none}
+    .table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;white-space:nowrap;font-size:12px}
+    th,td{text-align:right;padding:12px 10px;border-bottom:1px solid #f0eef5}th{color:#827d93;font-weight:700;background:#fbfaff}
+    td{color:#403c50}.muted{color:#9994a7}.pill{display:inline-block;padding:5px 8px;border-radius:20px;background:#f1edff;color:#6546cf;font-size:10px;font-weight:700}
+    .pill.free{background:#f2f2f5;color:#777}.pill.pending{background:#fff5df;color:#946300}.pill.expired{background:#fff0f1;color:#b4233d}
+    .empty{text-align:center;color:#9994a7;padding:25px}.footnote{color:#898498;font-size:11px;line-height:1.8;margin:12px 2px}
+    .auth-box{max-width:480px;margin:70px auto;background:#fff;border:1px solid #ebe8f2;border-radius:18px;padding:25px;text-align:center}
+    @media(max-width:850px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:520px){.page{padding:18px 12px 35px}header{align-items:flex-start;flex-direction:column}h1{font-size:19px}.grid{gap:8px}.card{padding:13px}.metric{font-size:21px}.section{padding:13px}.section-head{align-items:flex-start;flex-direction:column}.search{max-width:none}}
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div class="brand"><div class="mark">✦</div><div><h1>NEXORA AI — لوحة المدير</h1><div class="sub">متابعة الاشتراكات والاستهلاك والحسابات</div></div></div>
+      <div class="actions"><a class="back" href="./index.html">العودة إلى NEXORA</a><button id="refreshBtn" class="primary">تحديث البيانات</button></div>
+    </header>
+    <div id="status" class="status">جارٍ التحقق من تسجيل الدخول...</div>
+    <section id="dashboard" hidden>
+      <div class="grid">
+        <article class="card"><div class="metric-label">الاشتراكات النشطة</div><div class="metric" id="activeCount">—</div><div class="metric-note">Pro و Premium</div></article>
+        <article class="card"><div class="metric-label">طلبات Gemini هذا الشهر</div><div class="metric" id="requestCount">—</div><div class="metric-note">بما فيها المحاولات وإعادة المحاولة</div></article>
+        <article class="card"><div class="metric-label">إجمالي Tokens</div><div class="metric" id="tokenCount">—</div><div class="metric-note">حسب بيانات Gemini المسجلة</div></article>
+        <article class="card"><div class="metric-label">إيرادات الاشتراكات النشطة</div><div class="metric" id="revenueCount">—</div><div class="metric-note">مجموع amount_egp للاشتراكات النشطة</div></article>
+      </div>
+      <div class="grid">
+        <article class="card"><div class="metric-label">طلبات الشات</div><div class="metric" id="chatCount">—</div></article>
+        <article class="card"><div class="metric-label">طلبات مراجعة المحتوى</div><div class="metric" id="moderationCount">—</div></article>
+        <article class="card"><div class="metric-label">طلبات الصوت</div><div class="metric" id="ttsCount">—</div></article>
+        <article class="card"><div class="metric-label">الطلبات الفاشلة</div><div class="metric" id="failedCount">—</div></article>
+      </div>
+      <section class="section">
+        <div class="section-head"><h2>استهلاك الحسابات</h2><input id="searchInput" class="search" type="search" placeholder="ابحث بالبريد أو اسم الحساب..."></div>
+        <div class="table-wrap"><table><thead><tr><th>الحساب</th><th>الخطة</th><th>الحالة</th><th>طلبات الشات</th><th>طلبات الصوت</th><th>المراجعة</th><th>Tokens</th><th>آخر نشاط</th></tr></thead><tbody id="accountsBody"><tr><td colspan="8" class="empty">جارٍ تحميل البيانات...</td></tr></tbody></table></div>
+      </section>
+      <section class="section">
+        <div class="section-head"><h2>أحدث عمليات الاستخدام</h2><span class="muted" id="eventsCount"></span></div>
+        <div class="table-wrap"><table><thead><tr><th>الوقت</th><th>الحساب</th><th>النوع</th><th>النموذج</th><th>Input Tokens</th><th>Output Tokens</th><th>الإجمالي</th><th>النتيجة</th></tr></thead><tbody id="eventsBody"></tbody></table></div>
+      </section>
+      <p class="footnote">ملاحظة التكلفة: هذه اللوحة تعرض Tokens والطلبات والإيرادات المسجلة. لا تعرض تكلفة Gemini أو صافي الربح حاليًا لأن أسعار كل نموذج وتكلفة الصوت يجب ضبطها وفق تسعير حسابك الفعلي؛ لن نعرض أرقام تكلفة تخمينية على أنها حقيقية.</p>
+    </section>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const API_URL = "https://nexora-ai.egyptianshops1.workers.dev";
+    const SUPABASE_URL = "https://phnknceukzdsaibaoklx.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_6Ox7ZfOWOE5iFJFus2MsTw_aedbJSU9";
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const statusEl = document.getElementById("status");
+    const dashboard = document.getElementById("dashboard");
+    let accountRows = [];
+    let usageEvents = [];
+    let subscriptions = [];
+    const number = value => Number(value || 0).toLocaleString("en-US");
+    const safe = value => String(value ?? "");
+    function setStatus(message, type = "") {
+      statusEl.textContent = message;
+      statusEl.className = "status" + (type ? " " + type : "");
+    }
+    function activeSub(sub) {
+      const now = Date.now();
+      const start = sub.starts_at ? new Date(sub.starts_at).getTime() : 0;
+      const end = sub.expires_at ? new Date(sub.expires_at).getTime() : Infinity;
+      return sub.status === "active" && start <= now && end > now;
+    }
+    async function api(path, token) {
+      const res = await fetch(API_URL + path, {headers:{Authorization:"Bearer " + token}});
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "تعذر تحميل بيانات اللوحة (" + res.status + ")");
+      return data;
+    }
+    function renderAccounts() {
+      const q = document.getElementById("searchInput").value.trim().toLowerCase();
+      const body = document.getElementById("accountsBody");
+      const filtered = accountRows.filter(row => (row.email + " " + row.name + " " + row.plan).toLowerCase().includes(q));
+      body.replaceChildren();
+      if (!filtered.length) {
+        const tr = document.createElement("tr"), td = document.createElement("td");
+        td.colSpan = 8; td.className = "empty"; td.textContent = "لا توجد حسابات مطابقة.";
+        tr.append(td); body.append(tr); return;
+      }
+      for (const row of filtered) {
+        const tr = document.createElement("tr");
+        const values = [
+          row.email || row.name || row.userId || "حساب غير معروف",
+          row.planLabel,
+          row.statusLabel,
+          number(row.chat),
+          number(row.tts),
+          number(row.moderation),
+          number(row.tokens),
+          row.lastActivity ? new Date(row.lastActivity).toLocaleString("ar-EG") : "—"
+        ];
+        values.forEach((value, i) => {
+          const td = document.createElement("td");
+          if (i === 1 || i === 2) {
+            const span = document.createElement("span");
+            span.className = "pill" + (i === 1 && row.plan === "free" ? " free" : "") + (i === 2 && row.status === "pending" ? " pending" : "");
+            span.textContent = safe(value); td.append(span);
+          } else td.textContent = safe(value);
+          tr.append(td);
+        });
+        body.append(tr);
+      }
+    }
+    function renderEvents() {
+      const body = document.getElementById("eventsBody");
+      body.replaceChildren();
+      const recent = usageEvents.slice(0, 100);
+      document.getElementById("eventsCount").textContent = number(usageEvents.length) + " عملية هذا الشهر — عرض أحدث 100";
+      for (const event of recent) {
+        const tr = document.createElement("tr");
+        const user = accountRows.find(a => a.userId === event.user_id);
+        const vals = [
+          event.created_at ? new Date(event.created_at).toLocaleString("ar-EG") : "—",
+          user?.email || event.user_id || "غير معروف",
+          event.call_type === "tts" ? "صوت" : event.call_type === "moderation" ? "مراجعة" : "شات",
+          event.model || "—",
+          number(event.prompt_token_count),
+          number(event.candidates_token_count),
+          number(event.total_token_count),
+          event.succeeded ? "نجح" : "فشل"
+        ];
+        vals.forEach(v => {const td=document.createElement("td");td.textContent=safe(v);tr.append(td);});
+        body.append(tr);
+      }
+      if (!recent.length) {
+        const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=8;td.className="empty";td.textContent="لا توجد عمليات مسجلة هذا الشهر.";tr.append(td);body.append(tr);
+      }
+    }
+    async function loadDashboard() {
+      const {data:{session}} = await supabaseClient.auth.getSession();
+      if (!session?.access_token) {
+        dashboard.hidden = true;
+        setStatus("سجّل الدخول من صفحة NEXORA أولاً، ثم افتح لوحة المدير.", "error");
+        return;
+      }
+      setStatus("جارٍ تحميل بيانات الاشتراكات والاستهلاك...");
+      const [usage, subs] = await Promise.all([
+        api("/api/admin/usage", session.access_token),
+        api("/api/admin/subscriptions", session.access_token)
+      ]);
+      usageEvents = Array.isArray(usage.events) ? usage.events : [];
+      subscriptions = Array.isArray(subs.subscriptions) ? subs.subscriptions : [];
+      const active = subscriptions.filter(activeSub);
+      const userIds = new Set([...usageEvents.map(e => e.user_id).filter(Boolean), ...subscriptions.map(s => s.user_id).filter(Boolean)]);
+      accountRows = [...userIds].map(userId => {
+        const userEvents = usageEvents.filter(e => e.user_id === userId);
+        const sub = active.find(s => s.user_id === userId) || subscriptions.find(s => s.user_id === userId);
+        const count = type => userEvents.filter(e => e.call_type === type).length;
+        const last = userEvents.reduce((latest,e) => !latest || new Date(e.created_at) > new Date(latest) ? e.created_at : latest, null);
+        const valid = sub && activeSub(sub);
+        return {
+          userId,
+          email: sub?.account_email || "",
+          name: sub?.account_name || "",
+          plan: valid ? sub.plan : "free",
+          planLabel: valid ? String(sub.plan).toUpperCase() : "Free",
+          status: sub?.status || "free",
+          statusLabel: valid ? "نشط" : sub?.status === "pending" ? "قيد المراجعة" : "غير نشط",
+          chat: count("chat"), tts: count("tts"), moderation: count("moderation"),
+          tokens: userEvents.reduce((sum,e) => sum + Number(e.total_token_count || 0), 0),
+          lastActivity: last
+        };
+      }).sort((a,b) => b.tokens - a.tokens);
+      document.getElementById("activeCount").textContent = number(active.length);
+      document.getElementById("requestCount").textContent = number(usage.summary?.total_requests);
+      document.getElementById("tokenCount").textContent = number(usage.summary?.total_tokens);
+      document.getElementById("revenueCount").textContent = number(active.reduce((sum,s) => sum + Number(s.amount_egp || 0), 0)) + " ج.م";
+      document.getElementById("chatCount").textContent = number(usage.summary?.chat_requests);
+      document.getElementById("moderationCount").textContent = number(usage.summary?.moderation_requests);
+      document.getElementById("ttsCount").textContent = number(usage.summary?.tts_requests);
+      document.getElementById("failedCount").textContent = number(usage.summary?.failed_requests);
+      renderAccounts(); renderEvents(); dashboard.hidden = false;
+      setStatus("تم تحميل البيانات بنجاح. الوصول للوحة محمي بصلاحية المدير.", "ok");
+    }
+    document.getElementById("refreshBtn").addEventListener("click", () => loadDashboard().catch(e => setStatus(e.message, "error")));
+    document.getElementById("searchInput").addEventListener("input", renderAccounts);
+    loadDashboard().catch(error => {
+      dashboard.hidden = true;
+      setStatus(error.message + " — تأكد من أن حسابك هو حساب المدير وأن Worker منشور.", "error");
+    });
+  </script>
+</body>
+</html>
