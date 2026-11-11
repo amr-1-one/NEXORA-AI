@@ -107,7 +107,7 @@
       for (const row of filtered) {
         const tr = document.createElement("tr");
         const values = [
-          row.email || row.name || row.userId || "حساب غير معروف",
+          row.name ? (row.name + (row.email ? " — " + row.email : "")) : (row.email || row.userId || "حساب غير معروف"),
           row.planLabel,
           row.statusLabel,
           number(row.chat),
@@ -138,7 +138,7 @@
         const user = accountRows.find(a => a.userId === event.user_id);
         const vals = [
           event.created_at ? new Date(event.created_at).toLocaleString("ar-EG") : "—",
-          user?.email || event.user_id || "غير معروف",
+          user ? (user.email || user.name || user.userId) : (event.user_id || "غير معروف"),
           event.call_type === "tts" ? "صوت" : event.call_type === "moderation" ? "مراجعة" : "شات",
           event.model || "—",
           number(event.prompt_token_count),
@@ -161,24 +161,33 @@
         return;
       }
       setStatus("جارٍ تحميل بيانات الاشتراكات والاستهلاك...");
-      const [usage, subs] = await Promise.all([
+      const [usage, subs, usersData] = await Promise.all([
         api("/api/admin/usage", session.access_token),
-        api("/api/admin/subscriptions", session.access_token)
+        api("/api/admin/subscriptions", session.access_token),
+        api("/api/admin/users", session.access_token)
       ]);
       usageEvents = Array.isArray(usage.events) ? usage.events : [];
       subscriptions = Array.isArray(subs.subscriptions) ? subs.subscriptions : [];
+      const authUsers = Array.isArray(usersData.users) ? usersData.users : [];
       const active = subscriptions.filter(activeSub);
-      const userIds = new Set([...usageEvents.map(e => e.user_id).filter(Boolean), ...subscriptions.map(s => s.user_id).filter(Boolean)]);
+      const userIds = new Set([
+        ...authUsers.map(u => u.id).filter(Boolean),
+        ...usageEvents.map(e => e.user_id).filter(Boolean),
+        ...subscriptions.map(s => s.user_id).filter(Boolean)
+      ]);
       accountRows = [...userIds].map(userId => {
         const userEvents = usageEvents.filter(e => e.user_id === userId);
         const sub = active.find(s => s.user_id === userId) || subscriptions.find(s => s.user_id === userId);
+        const authUser = authUsers.find(u => u.id === userId);
+        const metadata = authUser?.user_metadata || {};
+        const authName = metadata.full_name || metadata.name || metadata.display_name || metadata.username || "";
         const count = type => userEvents.filter(e => e.call_type === type).length;
         const last = userEvents.reduce((latest,e) => !latest || new Date(e.created_at) > new Date(latest) ? e.created_at : latest, null);
         const valid = sub && activeSub(sub);
         return {
           userId,
-          email: sub?.account_email || "",
-          name: sub?.account_name || "",
+          email: authUser?.email || sub?.account_email || "",
+          name: authName || sub?.account_name || "",
           plan: valid ? sub.plan : "free",
           planLabel: valid ? String(sub.plan).toUpperCase() : "Free",
           status: sub?.status || "free",
