@@ -820,6 +820,97 @@ function makeSpeakButton(message) {
   button.addEventListener("click", () => speakAssistantMessage(message, button));
   return button;
 }
+
+function makeFeedbackControls(message) {
+  const wrap = document.createElement("div");
+  wrap.className = "assistant-feedback";
+  const isEnglish = preferences.language === "en";
+  const feedbackChatId = activeChatId;
+
+  if (message.feedbackSubmitted) {
+    const done = document.createElement("span");
+    done.className = "feedback-status";
+    done.textContent = isEnglish ? "Thanks for your feedback" : "شكرًا على تقييمك";
+    wrap.appendChild(done);
+    return wrap;
+  }
+
+  const prompt = document.createElement("span");
+  prompt.className = "feedback-prompt";
+  prompt.textContent = isEnglish ? "Was this answer helpful?" : "هل كان الرد مفيدًا؟";
+
+  const positive = document.createElement("button");
+  positive.type = "button";
+  positive.className = "feedback-choice";
+  positive.textContent = isEnglish ? "Helpful" : "مفيد";
+
+  const negative = document.createElement("button");
+  negative.type = "button";
+  negative.className = "feedback-choice";
+  negative.textContent = isEnglish ? "Not helpful" : "غير مفيد";
+
+  const status = document.createElement("span");
+  status.className = "feedback-status";
+
+  const saveFeedback = async (rating, reason = "") => {
+    positive.disabled = true;
+    negative.disabled = true;
+    status.textContent = isEnglish ? "Sending…" : "جارٍ الإرسال…";
+    const { error } = await supabaseClient.from("nexora_feedback").insert({
+      user_id: currentUser?.id || null,
+      chat_id: feedbackChatId || null,
+      message_text: String(message.text || "").slice(0, 5000),
+      rating,
+      reason: reason.trim() ? reason.trim().slice(0, 500) : null
+    });
+
+    if (error) {
+      positive.disabled = false;
+      negative.disabled = false;
+      status.textContent = isEnglish ? "Could not send. Try again." : "تعذّر إرسال التقييم. حاول مرة أخرى.";
+      console.error("Feedback save error:", error);
+      return;
+    }
+
+    message.feedbackSubmitted = true;
+    message.feedbackRating = rating;
+    status.textContent = isEnglish ? "Thanks for your feedback" : "شكرًا على تقييمك";
+    prompt.remove();
+    positive.remove();
+    negative.remove();
+    form?.remove();
+    if (activeChatId === feedbackChatId) await persistCurrent();
+  };
+
+  let form = null;
+  positive.addEventListener("click", () => saveFeedback("positive"));
+  negative.addEventListener("click", () => {
+    if (form) return;
+    form = document.createElement("div");
+    form.className = "feedback-report-form";
+    const reason = document.createElement("textarea");
+    reason.maxLength = 500;
+    reason.rows = 2;
+    reason.placeholder = isEnglish
+      ? "What was wrong with this answer? (optional)"
+      : "إيه المشكلة في الرد؟ (اختياري)";
+    const submit = document.createElement("button");
+    submit.type = "button";
+    submit.className = "feedback-choice feedback-submit";
+    submit.textContent = isEnglish ? "Send report" : "إرسال البلاغ";
+    submit.addEventListener("click", () => {
+      submit.disabled = true;
+      saveFeedback("negative", reason.value).finally(() => { submit.disabled = false; });
+    });
+    form.append(reason, submit);
+    wrap.appendChild(form);
+    reason.focus();
+  });
+
+  wrap.append(prompt, positive, negative, status);
+  return wrap;
+}
+
 function renderAssistantContent(bubble, message) {
   const raw = message.text || "";
   const parts = raw.split(/```([\w+-]*)\n?([\s\S]*?)```/g);
@@ -861,6 +952,7 @@ function renderAssistantContent(bubble, message) {
   const actions = document.createElement("div");
   actions.className = "assistant-message-actions";
   actions.append(makeCopyButton(raw, preferences.language === "en" ? "Copy answer" : "نسخ الإجابة"), makeSpeakButton(message));
+  actions.appendChild(makeFeedbackControls(message));
   bubble.appendChild(actions);
 
   if (message.imageDataUrl) {
