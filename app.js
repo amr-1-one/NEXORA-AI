@@ -8,6 +8,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const form = document.getElementById("chatForm");
 const input = document.getElementById("prompt");
 const sendBtn = document.getElementById("sendBtn");
+const stopBtn = document.getElementById("stopBtn");
 const micBtn = document.getElementById("micBtn");
 const fileInput = document.getElementById("fileInput");
 const attachBtn = document.getElementById("attachBtn");
@@ -35,6 +36,10 @@ let messages = [];
 let conversations = [];
 let activeChatId = null;
 let isTyping = false;
+let activeRequestController = null;
+let activeRequestWaiting = null;
+let activeTypingStop = null;
+let typingTimer = null;
 let currentUser = null;
 let authMode = "login";
 let speechRecognition = null;
@@ -942,41 +947,66 @@ function typeAssistantMessage(text) {
   return new Promise(resolve => {
     const row = document.createElement("div");
     row.className = "message assistant";
-
     const avatar = document.createElement("div");
     avatar.className = "msg-avatar";
     avatar.textContent = "✦";
-
     const bubble = document.createElement("div");
     bubble.className = "bubble";
-
     row.append(avatar, bubble);
     messagesEl.appendChild(row);
     welcome.style.display = "none";
 
     const lines = splitResponseIntoLines(text);
     let index = 0;
-
+    let settled = false;
+    const finish = (content) => {
+      if (settled) return;
+      settled = true;
+      if (typingTimer) clearTimeout(typingTimer);
+      typingTimer = null;
+      const message = { role: "assistant", text: content };
+      if (content.trim()) messages.push(message);
+      bubble.textContent = "";
+      if (content.trim()) renderAssistantContent(bubble, message);
+      else row.remove();
+      activeTypingStop = null;
+      persistCurrent();
+      resolve();
+    };
+    activeTypingStop = () => finish(bubble.textContent || "");
     function showNextLine() {
+      if (settled) return;
       if (index >= lines.length) {
-        const message = { role: "assistant", text };
-        messages.push(message);
-        bubble.textContent = "";
-        renderAssistantContent(bubble, message);
-        persistCurrent();
-        resolve();
+        finish(text);
         return;
       }
-
       if (index > 0) bubble.textContent += "\n";
       bubble.textContent += lines[index++];
       scrollToBottom();
-      setTimeout(showNextLine, 15);
+      typingTimer = setTimeout(showNextLine, 15);
     }
-
     showNextLine();
   });
 }
+
+function stopAssistantResponse() {
+  if (!isTyping) return;
+  if (activeRequestController) {
+    activeRequestController.abort();
+    activeRequestController = null;
+  }
+  if (activeRequestWaiting) {
+    activeRequestWaiting.remove();
+    activeRequestWaiting = null;
+  }
+  if (activeTypingStop) activeTypingStop();
+  if (stopBtn) stopBtn.hidden = true;
+  sendBtn.disabled = false;
+  isTyping = false;
+  input.focus();
+}
+
+if (stopBtn) stopBtn.addEventListener("click", stopAssistantResponse);
 
 function getResponseLengthInstruction() {
   const instructions = {
@@ -1164,7 +1194,11 @@ async function sendMessage(text) {
     await rememberFromUserMessage(originalPrompt);
     const memoryContext = getNexoraMemoryContext();
 
+    activeRequestController = new AbortController();
+    activeRequestWaiting = waiting;
+    stopBtn.hidden = false;
     const response = await fetch(API_URL + "/api/chat", {
+      signal: activeRequestController.signal,
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1193,10 +1227,15 @@ async function sendMessage(text) {
       alert(data.moderationWarning);
     }
   } catch (error) {
-    waiting.remove();
-    addMessage("assistant", "حدث خطأ: " + error.message + "\nتأكد من اتصال الخادم وإعدادات Gemini.");
-    await persistCurrent();
+    if (error?.name !== "AbortError") {
+      waiting.remove();
+      addMessage("assistant", "حدث خطأ: " + error.message + "\nتأكد من اتصال الخادم وإعدادات Gemini.");
+      await persistCurrent();
+    }
   } finally {
+    activeRequestController = null;
+    activeRequestWaiting = null;
+    stopBtn.hidden = true;
     sendBtn.disabled = false;
     isTyping = false;
     input.focus();
