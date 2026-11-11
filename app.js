@@ -1000,9 +1000,7 @@ function stopAssistantResponse() {
     activeRequestWaiting = null;
   }
   if (activeTypingStop) activeTypingStop();
-  if (stopBtn) stopBtn.hidden = true;
-  sendBtn.disabled = false;
-  isTyping = false;
+  // Keep the composer locked until the aborted request reaches its finally block.
   input.focus();
 }
 
