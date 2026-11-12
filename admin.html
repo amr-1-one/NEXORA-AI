@@ -62,12 +62,19 @@
         <div class="section-head"><h2>أحدث عمليات الاستخدام</h2><span class="muted" id="eventsCount"></span></div>
         <div class="table-wrap"><table><thead><tr><th>الوقت</th><th>الحساب</th><th>النوع</th><th>النموذج</th><th>Input Tokens</th><th>Output Tokens</th><th>الإجمالي</th><th>النتيجة</th></tr></thead><tbody id="eventsBody"></tbody></table></div>
       </section>
+      <section class="section">
+        <div class="section-head"><h2>طلبات الدفع اليدوي — Vodafone Cash</h2><button id="paymentRefreshBtn" type="button">تحديث الطلبات</button></div>
+        <div class="footnote">لا توافق على أي طلب اعتمادًا على صورة أو رقم مرجعي فقط؛ تحقق من وصول المبلغ فعليًا إلى المحفظة أولًا.</div>
+        <div class="table-wrap"><table><thead><tr><th>التاريخ</th><th>الحساب</th><th>الباقة</th><th>المبلغ</th><th>مرجع التحويل</th><th>الحالة</th><th>ملاحظة</th><th>الإجراء</th></tr></thead><tbody id="paymentRequestsBody"><tr><td colspan="8" class="empty">جارٍ تحميل الطلبات...</td></tr></tbody></table></div>
+      </section>
       <p class="footnote">ملاحظة التكلفة: هذه اللوحة تعرض Tokens والطلبات والإيرادات المسجلة. لا تعرض تكلفة Gemini أو صافي الربح حاليًا لأن أسعار كل نموذج وتكلفة الصوت يجب ضبطها وفق تسعير حسابك الفعلي؛ لن نعرض أرقام تكلفة تخمينية على أنها حقيقية.</p>
     </section>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const API_URL = "https://nexora-ai.egyptianshops1.workers.dev";
+    const PAYMENTS_URL = "https://phnknceukzdsaibaoklx.supabase.co/functions/v1/nexora-payments";
+    let currentAccessToken = "";
     const SUPABASE_URL = "https://phnknceukzdsaibaoklx.supabase.co";
     const SUPABASE_KEY = "sb_publishable_6Ox7ZfOWOE5iFJFus2MsTw_aedbJSU9";
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -153,8 +160,80 @@
         const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=8;td.className="empty";td.textContent="لا توجد عمليات مسجلة هذا الشهر.";tr.append(td);body.append(tr);
       }
     }
+    async function paymentApi(payload) {
+      const res = await fetch(PAYMENTS_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_KEY,
+          "Authorization": "Bearer " + currentAccessToken
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "تعذر تنفيذ طلب الدفع.");
+      return data;
+    }
+    async function loadPaymentRequests() {
+      const body = document.getElementById("paymentRequestsBody");
+      body.replaceChildren();
+      try {
+        const data = await paymentApi({ action: "admin_list" });
+        const rows = data.requests || [];
+        if (!rows.length) {
+          const tr=document.createElement("tr"),td=document.createElement("td");
+          td.colSpan=8;td.className="empty";td.textContent="لا توجد طلبات دفع حتى الآن.";
+          tr.append(td);body.append(tr);return;
+        }
+        for (const item of rows) {
+          const tr=document.createElement("tr");
+          const cells=[
+            item.created_at ? new Date(item.created_at).toLocaleString("ar-EG") : "—",
+            item.user_id,
+            String(item.plan || "").toUpperCase(),
+            number(item.amount_egp)+" ج.م",
+            item.payment_reference,
+            item.status==="pending"?"قيد المراجعة":item.status==="approved"?"مقبول":"مرفوض",
+            item.admin_note || "—"
+          ];
+          for(const value of cells){const td=document.createElement("td");td.textContent=safe(value);tr.append(td);}
+          const action=document.createElement("td");
+          if(item.status==="pending"){
+            const approve=document.createElement("button");
+            approve.textContent="تأكيد الاستلام والموافقة";
+            approve.className="primary";
+            approve.addEventListener("click",()=>reviewPayment(item.id,"approve"));
+            const reject=document.createElement("button");
+            reject.textContent="رفض";
+            reject.style.marginRight="6px";
+            reject.addEventListener("click",()=>reviewPayment(item.id,"reject"));
+            action.append(approve,reject);
+          } else action.textContent="تمت المراجعة";
+          tr.append(action);body.append(tr);
+        }
+      } catch(error) {
+        const tr=document.createElement("tr"),td=document.createElement("td");
+        td.colSpan=8;td.className="empty";td.textContent=error.message;
+        tr.append(td);body.append(tr);
+      }
+    }
+    async function reviewPayment(id, decision) {
+      const message = decision==="approve"
+        ? "تأكدت بنفسك من وصول المبلغ للمحفظة؟ لن يتم التفعيل إلا بعد التأكد."
+        : "هل تريد رفض طلب الدفع؟";
+      if(!confirm(message)) return;
+      const note=prompt("ملاحظة اختيارية للعميل:") || "";
+      try {
+        await paymentApi({action:"review",id,decision,admin_note:note});
+        setStatus(decision==="approve"?"تمت الموافقة وتفعيل الاشتراك لمدة 30 يومًا.":"تم رفض طلب الدفع.","ok");
+        await loadPaymentRequests();
+        await loadDashboard();
+      } catch(error) { setStatus(error.message,"error"); }
+    }
+    document.getElementById("paymentRefreshBtn")?.addEventListener("click",loadPaymentRequests);
     async function loadDashboard() {
       const {data:{session}} = await supabaseClient.auth.getSession();
+      currentAccessToken = session?.access_token || "";
       if (!session?.access_token) {
         dashboard.hidden = true;
         setStatus("سجّل الدخول من صفحة NEXORA أولاً، ثم افتح لوحة المدير.", "error");
@@ -206,6 +285,7 @@
       document.getElementById("ttsCount").textContent = number(usage.summary?.tts_requests);
       document.getElementById("failedCount").textContent = number(usage.summary?.failed_requests);
       renderAccounts(); renderEvents(); dashboard.hidden = false;
+      await loadPaymentRequests();
       setStatus("تم تحميل البيانات بنجاح. الوصول للوحة محمي بصلاحية المدير.", "ok");
     }
     document.getElementById("refreshBtn").addEventListener("click", () => loadDashboard().catch(e => setStatus(e.message, "error")));
