@@ -1400,15 +1400,3 @@ body { font-size: 14px; }
   border-color: #3b3b4d;
 }
 
-
-/* Desktop: keep the composer close to the latest message.
-   The welcome screen keeps its original full-height layout. */
-@media (min-width: 761px) {
-  .main:has(#messages .message) .conversation {
-    flex: 0 1 auto;
-    min-height: 0;
-    max-height: calc(100vh - 190px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
-}
