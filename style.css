@@ -1399,3 +1399,14 @@ body { font-size: 14px; }
   color: #eeeafa;
   border-color: #3b3b4d;
 }
+
+
+/* NEXORA brand icon consistency */
+.brand-logo { object-fit: contain; }
+.brand .brand-mark.brand-logo { width: 38px; height: 38px; flex: 0 0 38px; border-radius: 11px; }
+.welcome .welcome-icon.brand-logo { display: block; width: 58px; height: 58px; border-radius: 17px; object-fit: cover; }
+.auth-modal .modal-brand.brand-logo { display: block; width: 52px; height: 52px; border-radius: 15px; object-fit: cover; }
+@media(max-width:760px) {
+  .brand .brand-mark.brand-logo { width: 34px; height: 34px; flex-basis: 34px; }
+  .welcome .welcome-icon.brand-logo { width: 48px; height: 48px; }
+}
