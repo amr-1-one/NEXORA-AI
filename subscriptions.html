@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#fff"><title>اشتراكات NEXORA AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{font-family:Inter,"Noto Sans Arabic",sans-serif;color:#29263a;background:#f7f7fb}*{box-sizing:border-box}body{margin:0;padding:24px 14px}.wrap{max-width:850px;margin:auto}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:22px}.brand{font-weight:800;font-size:20px;color:#6848d5}.link,button{border:1px solid #e5e1ef;background:white;color:#5943a0;border-radius:11px;padding:10px 14px;text-decoration:none;font:inherit;font-size:13px;font-weight:700;cursor:pointer}.intro,.panel,.plan{background:white;border:1px solid #ebe8f2;border-radius:17px;padding:20px;margin-bottom:14px}.intro h1{margin:0 0 8px;font-size:25px}.muted{color:#817c90;font-size:13px;line-height:1.8}.plans{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.plan h2{margin:0 0 8px;font-size:18px}.price{font-size:27px;font-weight:800;margin:8px 0}.plan p{font-size:12px;color:#817c90;line-height:1.8}.plan button{width:100%;background:#7455e8;color:white;border-color:#7455e8}.panel h2{font-size:17px;margin-top:0}label{display:block;font-size:13px;font-weight:700;margin:12px 0 7px}input,select{width:100%;padding:12px;border:1px solid #e4e0ed;border-radius:10px;font:inherit}button:disabled{opacity:.55;cursor:not-allowed}.status{padding:12px;border-radius:10px;background:#f5f2ff;color:#57419c;font-size:13px;line-height:1.8;margin:12px 0}.status.error{background:#fff1f2;color:#a32640}.request{border-top:1px solid #eee;padding:12px 0;font-size:13px;line-height:1.9}.pill{display:inline-block;border-radius:20px;padding:3px 9px;background:#fff4d9;color:#896000;font-size:11px;font-weight:700}.fine{font-size:11px;color:#8c8799;line-height:1.8}@media(max-width:600px){.plans{grid-template-columns:1fr}.intro h1{font-size:21px}.top{align-items:flex-start}}
+</style></head>
+<body><main class="wrap">
+<div class="top"><div class="brand">✦ NEXORA AI</div><a class="link" href="./index.html">العودة للمحادثات</a></div>
+<section class="intro"><h1>اختر اشتراك NEXORA AI</h1><div class="muted">قدّم طلب الاشتراك، وسيظل قيد المراجعة حتى يتحقق المدير من وصول المبلغ. لا يتم تفعيل أي باقة تلقائيًا.</div></section>
+<div class="plans">
+<article class="plan"><h2>Pro</h2><div class="price">99 ج.م <small style="font-size:12px">/ 30 يومًا</small></div><p>سعر تجريبي مقترح، قابل للتعديل قبل الإطلاق.</p><button type="button" data-plan="pro">طلب باقة Pro</button></article>
+<article class="plan"><h2>Premium</h2><div class="price">199 ج.م <small style="font-size:12px">/ 30 يومًا</small></div><p>سعر تجريبي مقترح، قابل للتعديل قبل الإطلاق.</p><button type="button" data-plan="premium">طلب باقة Premium</button></article>
+</div>
+<section class="panel" id="requestPanel" hidden><h2>تسجيل طلب الدفع</h2><div class="muted" id="selectedPlan"></div>
+<div class="status">طريقة الدفع المقترحة: Vodafone Cash. احصل على تعليمات التحويل من صاحب المحفظة مباشرة بعد التأكد من موافقة صاحبها وشروط مزود الخدمة. لا يوجد رقم محفظة منشور هنا.</div>
+<label for="reference">رقم مرجع العملية بعد التحويل</label><input id="reference" maxlength="100" placeholder="أدخل رقم العملية كما يظهر في إيصال التحويل">
+<button id="submitRequest" type="button" style="margin-top:12px;background:#7455e8;color:white">إرسال الطلب للمراجعة</button>
+<p class="fine">لا ترسل رقم البطاقة أو الرقم السري أو رمز OTP. إرسال الطلب لا يعني تأكيد الدفع أو تفعيل الاشتراك.</p></section>
+<section class="panel"><h2>طلباتي السابقة</h2><div id="requests" class="muted">جارٍ التحقق من تسجيل الدخول...</div><button id="refresh" type="button">تحديث الطلبات</button></section>
+<div id="status" class="status" role="status">يتم التحقق من حسابك...</div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL="https://phnknceukzdsaibaoklx.supabase.co";
+const SUPABASE_KEY="sb_publishable_6Ox7ZfOWOE5iFJFus2MsTw_aedbJSU9";
+const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const endpoint=SUPABASE_URL+"/functions/v1/nexora-payments";
+let session=null,selectedPlan="";
+const statusEl=document.getElementById("status");
+function status(message,error=false){statusEl.textContent=message;statusEl.classList.toggle("error",error)}
+async function callApi(payload){const res=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","apikey":SUPABASE_KEY,"Authorization":"Bearer "+session.access_token},body:JSON.stringify(payload)});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||"تعذر تنفيذ الطلب");return data}
+function choose(plan){selectedPlan=plan;document.getElementById("requestPanel").hidden=false;document.getElementById("selectedPlan").textContent="الباقة المختارة: "+(plan==="pro"?"Pro — 99 جنيه":"Premium — 199 جنيه")+" لمدة 30 يومًا (سعر تجريبي مقترح).";document.getElementById("requestPanel").scrollIntoView({behavior:"smooth",block:"start"})}
+document.querySelectorAll("[data-plan]").forEach(b=>b.addEventListener("click",()=>choose(b.dataset.plan)));
+async function loadRequests(){if(!session){document.getElementById("requests").textContent="سجّل الدخول أولًا لعرض طلباتك.";return}try{const data=await callApi({action:"mine"});const box=document.getElementById("requests");box.replaceChildren();if(!data.requests?.length){box.textContent="لا توجد طلبات سابقة.";return}for(const r of data.requests){const div=document.createElement("div");div.className="request";const label=r.status==="pending"?"قيد المراجعة":r.status==="approved"?"تمت الموافقة":"مرفوض";div.textContent=(r.plan.toUpperCase()+" — "+r.amount_egp+" جنيه — "+label+" — "+new Date(r.created_at).toLocaleString("ar-EG"))+(r.admin_note?" — ملاحظة: "+r.admin_note:"");box.append(div)}}catch(e){document.getElementById("requests").textContent=e.message}}
+document.getElementById("submitRequest").addEventListener("click",async()=>{if(!session){status("سجّل الدخول أولًا من الصفحة الرئيسية.",true);return}const reference=document.getElementById("reference").value.trim();if(reference.length<4){status("أدخل رقم مرجع العملية الصحيح.",true);return}const button=document.getElementById("submitRequest");button.disabled=true;try{const data=await callApi({action:"create",plan:selectedPlan,payment_reference:reference});status(data.message||"تم إرسال الطلب.");document.getElementById("reference").value="";await loadRequests()}catch(e){status(e.message,true)}finally{button.disabled=false}});
+document.getElementById("refresh").addEventListener("click",loadRequests);
+(async()=>{const {data}=await supabaseClient.auth.getSession();session=data.session;if(session){status("تم تسجيل الدخول. يمكنك تقديم طلب اشتراك.");await loadRequests()}else status("لم تسجل الدخول. افتح NEXORA AI وسجّل الدخول ثم ارجع إلى صفحة الاشتراكات.",true)})();
+</script></body></html>
