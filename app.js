@@ -1035,6 +1035,10 @@ function isImageEditRequest(prompt) {
   return /(?:عدّل|عدل|تعديل|غيّر|غير|تغيير|شيل|احذف|امسح|ضيف|أضف|اضف|حط|خلّي|خلي|حوّل|حول|قص|حسّن|حسن|تحسين|زوّد|زود|استبدل|بدّل|بدل|غيّرلي|غيرلي|اعملها|خلّيها|خليها|edit|modify|change|remove|erase|add|replace|turn into|convert|enhance|improve|crop|background|color)/i.test(prompt || "");
 }
 
+function isImageGenerationRequest(prompt) {
+  return /(?:اعمل|أنشئ|انشئ|ولد|ولّد|ارسم|صمم|صمّم|ابتكر|اصنع|اعملي|اعمللي).{0,35}(?:صورة|صور|رسمة|تصميم)|(?:صورة|رسمة|تصميم).{0,30}(?:من|لـ|عن|توضح|تُظهر)|(?:generate|create|make|draw|design).{0,30}(?:an? image|picture|illustration|artwork)/i.test(prompt || "");
+}
+
 function typeAssistantMessage(text) {
   return new Promise(resolve => {
     const row = document.createElement("div");
@@ -1199,6 +1203,54 @@ async function sendMessage(text) {
     if (waiting) waiting.remove();
     try {
       await typeAssistantMessage("أنا NEXORA AI، المساعد الذكي الذي طوّره AMR (Developer AMR). قد أستخدم نماذج وخدمات ذكاء اصطناعي من شركات أخرى لتشغيل بعض قدراتي، لكن مطوّر NEXORA AI وصاحب المشروع هو AMR.");
+    } finally {
+      sendBtn.disabled = false;
+      isTyping = false;
+      input.focus();
+    }
+    return;
+  }
+
+  // Route text-only image generation requests to the dedicated image endpoint.
+  if (!imageAttachments.length && isImageGenerationRequest(originalPrompt)) {
+    if (!waiting) {
+      waiting = document.createElement("div");
+      waiting.className = "message assistant";
+      const avatar = document.createElement("div");
+      avatar.className = "msg-avatar";
+      avatar.textContent = "✦";
+      waitingBubble = document.createElement("div");
+      waitingBubble.className = "bubble typing";
+      waiting.append(avatar, waitingBubble);
+      messagesEl.appendChild(waiting);
+    }
+    waitingBubble.textContent = "جارٍ إنشاء الصورة... قد يستغرق ذلك بعض الوقت.";
+    scrollToBottom();
+
+    try {
+      const { data: sessionData } = await supabaseClient.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      const response = await fetch(API_URL + "/api/generate-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { "Authorization": "Bearer " + accessToken } : {})
+        },
+        body: JSON.stringify({ prompt: originalPrompt })
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "تعذّر إنشاء الصورة: " + response.status);
+      if (!data.image?.data) throw new Error("الخادم لم يرجع صورة مولّدة.");
+
+      waiting.remove();
+      const mimeType = data.image.mimeType || "image/png";
+      const imageDataUrl = "data:" + mimeType + ";base64," + data.image.data;
+      await typeAssistantImageMessage(data.reply || "تم إنشاء الصورة بنجاح.", imageDataUrl);
+    } catch (error) {
+      if (waiting) waiting.remove();
+      addMessage("assistant", "تعذّر إنشاء الصورة: " + error.message);
+      await persistCurrent();
     } finally {
       sendBtn.disabled = false;
       isTyping = false;
