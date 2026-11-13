@@ -1928,6 +1928,59 @@ async function initializeApp() {
 initializeApp();
 
 
+// NEXORA icon picker: choose an icon before installing the PWA.
+(() => {
+  const names = ["Orbit", "Prism", "Halo", "Hex", "Rise", "Noir"];
+  const iconPath = (n) => `./icons/nexora-style-${n}.svg`;
+  const manifestPath = (n) => `./manifest-style-${n}.json`;
+  const manifestLink = document.getElementById("appManifest");
+  const chooserButton = document.getElementById("chooseAppIconBtn");
+  if (!chooserButton || !manifestLink) return;
+  let selected = Math.min(6, Math.max(1, Number(localStorage.getItem("nexora-app-icon") || 1)));
+  const installed = () => window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  const applySelection = () => {
+    manifestLink.href = manifestPath(selected);
+    let appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
+    if (!appleIcon) {
+      appleIcon = document.createElement("link");
+      appleIcon.rel = "apple-touch-icon";
+      document.head.appendChild(appleIcon);
+    }
+    appleIcon.href = iconPath(selected);
+  };
+  applySelection();
+  const backdrop = document.createElement("div");
+  backdrop.className = "modal-backdrop hidden";
+  backdrop.id = "iconPickerModal";
+  backdrop.innerHTML = `<section class="icon-picker-modal" role="dialog" aria-modal="true" aria-labelledby="iconPickerTitle">
+    <div class="icon-picker-head"><h2 id="iconPickerTitle">اختار أيقونة NEXORA</h2><button class="icon-picker-close" type="button" aria-label="إغلاق">×</button></div>
+    <p class="icon-picker-note">اختار الشكل اللي يعجبك. الأفضل تختار الأيقونة قبل تثبيت التطبيق.</p>
+    <div class="icon-picker-grid">${names.map((name,i)=>`<button class="icon-choice" type="button" data-icon="${i+1}"><img src="${iconPath(i+1)}" alt=""><span>${name}</span></button>`).join("")}</div>
+    <p class="icon-picker-status" aria-live="polite"></p>
+  </section>`;
+  document.body.appendChild(backdrop);
+  const status = backdrop.querySelector(".icon-picker-status");
+  const render = () => {
+    backdrop.querySelectorAll(".icon-choice").forEach(button => {
+      const active = Number(button.dataset.icon) === selected;
+      button.classList.toggle("selected", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+  };
+  const open = () => { render(); status.textContent = installed() ? "التطبيق مثبت بالفعل. تغيير الأيقونة يتطلب إزالة التطبيق من الشاشة الرئيسية ثم تثبيته مرة أخرى بعد اختيار الأيقونة." : "تم حفظ اختيارك على هذا الجهاز. ثبّت التطبيق بعد الاختيار لاستخدام الأيقونة الجديدة."; backdrop.classList.remove("hidden"); };
+  const close = () => backdrop.classList.add("hidden");
+  chooserButton.addEventListener("click", open);
+  backdrop.querySelector(".icon-picker-close").addEventListener("click", close);
+  backdrop.addEventListener("click", event => { if (event.target === backdrop) close(); });
+  backdrop.querySelectorAll(".icon-choice").forEach(button => button.addEventListener("click", () => {
+    selected = Number(button.dataset.icon);
+    localStorage.setItem("nexora-app-icon", String(selected));
+    applySelection();
+    render();
+    status.textContent = installed() ? "تم حفظ الاختيار. لتظهر الأيقونة الجديدة، أزل نسخة NEXORA المثبتة ثم أعد تثبيتها." : "تم اختيار الأيقونة! يمكنك الآن تثبيت NEXORA بها.";
+  }));
+})();
+ 
 // PWA install prompt (kept separate from chat/auth logic).
 (() => {
   const installButton = document.getElementById("installAppBtn");
