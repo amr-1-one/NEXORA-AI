@@ -1022,7 +1022,7 @@ body { font-size: 14px; }
 
 /* Assistant answer actions and standalone code blocks */
 .assistant .bubble { white-space: normal; }
-.assistant-prose { white-space: pre-wrap; overflow-wrap: anywhere; }
+.assistant-prose { white-space: pre-wrap; overflow-wrap: anywhere; font-weight: 600; }
 .assistant-message-actions {
   display: flex;
   justify-content: flex-start;
