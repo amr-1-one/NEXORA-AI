@@ -911,6 +911,51 @@ function makeFeedbackControls(message) {
   return wrap;
 }
 
+function appendTextWithLinks(container, text) {
+  const pattern = /(\\[([^\\]]+)\\]\\((https?:\\/\\/[^\\s)]+)\\)|https?:\\/\\/[^\\s<]+)/gi;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      container.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+    }
+
+    let urlText = match[3] || match[0];
+    let trailing = "";
+    while (/[.,!?؟،؛:)\\]}]$/.test(urlText)) {
+      trailing = urlText.slice(-1) + trailing;
+      urlText = urlText.slice(0, -1);
+    }
+
+    try {
+      const parsed = new URL(urlText);
+      if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+        const link = document.createElement("a");
+        link.href = parsed.href;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.className = "assistant-link";
+        link.textContent = match[2] || (/^https?:\\/\\/wa\\.me\\//i.test(urlText)
+          ? (preferences.language === "en" ? "Open WhatsApp chat" : "اضغط هنا للتواصل عبر واتساب")
+          : urlText);
+        container.appendChild(link);
+      } else {
+        container.appendChild(document.createTextNode(match[0]));
+      }
+    } catch {
+      container.appendChild(document.createTextNode(match[0]));
+    }
+
+    if (trailing) container.appendChild(document.createTextNode(trailing));
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    container.appendChild(document.createTextNode(text.slice(lastIndex)));
+  }
+}
+
 function renderAssistantContent(bubble, message) {
   const raw = message.text || "";
   const parts = raw.split(/```([\w+-]*)\n?([\s\S]*?)```/g);
@@ -922,7 +967,7 @@ function renderAssistantContent(bubble, message) {
       textPart.className = "assistant-prose";
       prose.split("\n").forEach((line, index) => {
         if (index) textPart.appendChild(document.createElement("br"));
-        textPart.appendChild(document.createTextNode(line));
+        appendTextWithLinks(textPart, line);
       });
       bubble.appendChild(textPart);
     }
