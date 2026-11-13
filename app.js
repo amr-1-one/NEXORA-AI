@@ -912,7 +912,7 @@ function makeFeedbackControls(message) {
 }
 
 function appendTextWithLinks(container, text) {
-  const pattern = /(\\[([^\\]]+)\\]\\((https?:\\/\\/[^\\s)]+)\\)|https?:\\/\\/[^\\s<]+)/gi;
+  const pattern = /(\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|https?:\/\/[^\s<]+)/gi;
   let lastIndex = 0;
   let match;
 
@@ -923,7 +923,7 @@ function appendTextWithLinks(container, text) {
 
     let urlText = match[3] || match[0];
     let trailing = "";
-    while (/[.,!?؟،؛:)\\]}]$/.test(urlText)) {
+    while (/[.,!?؟،؛:)}\]]$/.test(urlText)) {
       trailing = urlText.slice(-1) + trailing;
       urlText = urlText.slice(0, -1);
     }
@@ -936,7 +936,7 @@ function appendTextWithLinks(container, text) {
         link.target = "_blank";
         link.rel = "noopener noreferrer";
         link.className = "assistant-link";
-        link.textContent = match[2] || (/^https?:\\/\\/wa\\.me\\//i.test(urlText)
+        link.textContent = match[2] || (/^https?:\/\/wa\.me\//i.test(urlText)
           ? (preferences.language === "en" ? "Open WhatsApp chat" : "اضغط هنا للتواصل عبر واتساب")
           : urlText);
         container.appendChild(link);
