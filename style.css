@@ -1525,3 +1525,29 @@ html, body {
   background: #292938;
   color: #eeeafa;
 }
+
+
+/* Remove the unwanted dark block below the composer and keep the footer transparent. */
+:root[data-theme="dark"] body,
+:root[data-theme="dark"] .app,
+:root[data-theme="dark"] .main,
+:root[data-theme="dark"] .main > .composer-wrap {
+  background: #20202d !important;
+}
+:root[data-theme="dark"] .main > .composer-wrap {
+  border: 0 !important;
+  box-shadow: none !important;
+}
+:root[data-theme="dark"] .composer-wrap .disclaimer,
+:root[data-theme="dark"] .composer-wrap .copyright,
+:root[data-theme="dark"] #micStatus {
+  background: transparent !important;
+  color: #aaa5bb !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+:root[data-theme="dark"] .composer-wrap::before,
+:root[data-theme="dark"] .composer-wrap::after {
+  content: none !important;
+  display: none !important;
+}
