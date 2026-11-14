@@ -1496,3 +1496,32 @@ html, body {
 .icon-picker-close{border:0;background:transparent;font-size:24px;color:inherit;cursor:pointer}
 :root[data-theme="dark"] .icon-picker-modal,:root[data-theme="dark"] .icon-choice{background:#242432;color:#f5f2ff}
 @media(max-width:430px){.icon-picker-grid{gap:8px}.icon-choice img{width:60px;height:60px}}
+
+
+/* Dark theme: keep the entire composer/footer surface in the dark palette. */
+:root[data-theme="dark"] {
+  --surface: #20202d;
+  --text: #f1eff8;
+  --muted: #aaa5bb;
+  --border: #3b3b4d;
+}
+:root[data-theme="dark"] .composer-wrap,
+:root[data-theme="dark"] .disclaimer,
+:root[data-theme="dark"] .copyright,
+:root[data-theme="dark"] .attachment-list,
+:root[data-theme="dark"] .composer {
+  background: #20202d !important;
+  color: #eae7f4;
+}
+:root[data-theme="dark"] .composer textarea {
+  background: #292938 !important;
+  color: #f1eff8 !important;
+}
+:root[data-theme="dark"] .composer textarea::placeholder {
+  color: #aaa5bb;
+}
+:root[data-theme="dark"] .chat-search,
+:root[data-theme="dark"] .folder-filter {
+  background: #292938;
+  color: #eeeafa;
+}
