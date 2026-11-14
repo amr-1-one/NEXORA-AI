@@ -82,80 +82,67 @@ function validHexColor(value) {
   return /^#[0-9a-f]{6}$/i.test(value || "");
 }
 
+const NEXORA_LOCALES = {
+  ar: { dir:"rtl", lang:"ar", newChat:"＋ محادثة جديدة", chats:"محادثاتك", signIn:"تسجيل الدخول / إنشاء حساب", signOut:"تسجيل الخروج", clear:"مسح المحادثة", prompt:"اكتب رسالة إلى NEXORA AI...", disclaimer:"قد يخطئ NEXORA AI أحيانًا؛ راجع المعلومات المهمة.", eyebrow:"مساحة ذكية لكل أفكارك", welcome:"أهلاً بك في", welcomeText:"اسأل، تعلّم، ابتكر، ودعنا نبدأ من هنا.", settings:"⚙️ الإعدادات", settingsTitle:"إعدادات NEXORA", display:"اسم العرض", language:"لغة الواجهة", appearance:"المظهر", accent:"اللون الأساسي", length:"طول الردود", save:"حفظ الإعدادات", cancel:"إلغاء", search:"ابحث في محادثاتك...", folder:"＋ مجلد جديد", memory:"🧠 ذاكرتي", suggestions:["💡 اشرح لي موضوعًا","⌨️ اكتب لي كودًا","📚 ساعدني في المذاكرة","🚀 اقترح أفكارًا"], concise:"مختصر", balanced:"متوازن", detailed:"تفصيلي", guest:"زائر", guestInfo:"سجّل الدخول لحفظ محادثاتك" },
+  en: { dir:"ltr", lang:"en", newChat:"＋ New chat", chats:"Your chats", signIn:"Sign in / Create account", signOut:"Sign out", clear:"Clear chat", prompt:"Message NEXORA AI...", disclaimer:"NEXORA AI can make mistakes; check important information.", eyebrow:"A smart space for all your ideas", welcome:"Welcome to", welcomeText:"Ask, learn, create, and let's get started.", settings:"⚙️ Settings", settingsTitle:"NEXORA Settings", display:"Display name", language:"Interface language", appearance:"Appearance", accent:"Accent color", length:"Response length", save:"Save settings", cancel:"Cancel", search:"Search your conversations...", folder:"＋ New folder", memory:"🧠 My memory", suggestions:["💡 Explain a topic","⌨️ Write some code","📚 Help me study","🚀 Suggest ideas"], concise:"Concise", balanced:"Balanced", detailed:"Detailed", guest:"Guest", guestInfo:"Sign in to save your chats" },
+  fr: { dir:"ltr", lang:"fr", newChat:"＋ Nouvelle discussion", chats:"Vos discussions", signIn:"Se connecter / Créer un compte", signOut:"Se déconnecter", clear:"Effacer la discussion", prompt:"Écrivez à NEXORA AI...", disclaimer:"NEXORA AI peut faire des erreurs ; vérifiez les informations importantes.", eyebrow:"Un espace intelligent pour vos idées", welcome:"Bienvenue sur", welcomeText:"Posez des questions, apprenez et créez.", settings:"⚙️ Paramètres", settingsTitle:"Paramètres NEXORA", display:"Nom affiché", language:"Langue de l’interface", appearance:"Apparence", accent:"Couleur principale", length:"Longueur des réponses", save:"Enregistrer", cancel:"Annuler", search:"Rechercher des discussions...", folder:"＋ Nouveau dossier", memory:"🧠 Ma mémoire", suggestions:["💡 Expliquer un sujet","⌨️ Écrire du code","📚 M’aider à étudier","🚀 Proposer des idées"], concise:"Court", balanced:"Équilibré", detailed:"Détaillé", guest:"Invité", guestInfo:"Connectez-vous pour enregistrer vos discussions" },
+  es: { dir:"ltr", lang:"es", newChat:"＋ Nuevo chat", chats:"Tus chats", signIn:"Iniciar sesión / Crear cuenta", signOut:"Cerrar sesión", clear:"Borrar chat", prompt:"Escribe a NEXORA AI...", disclaimer:"NEXORA AI puede cometer errores; verifica la información importante.", eyebrow:"Un espacio inteligente para tus ideas", welcome:"Te damos la bienvenida a", welcomeText:"Pregunta, aprende, crea y empecemos.", settings:"⚙️ Ajustes", settingsTitle:"Ajustes de NEXORA", display:"Nombre visible", language:"Idioma de la interfaz", appearance:"Apariencia", accent:"Color principal", length:"Longitud de respuesta", save:"Guardar ajustes", cancel:"Cancelar", search:"Buscar conversaciones...", folder:"＋ Nueva carpeta", memory:"🧠 Mi memoria", suggestions:["💡 Explicar un tema","⌨️ Escribir código","📚 Ayudarme a estudiar","🚀 Sugerir ideas"], concise:"Breve", balanced:"Equilibrado", detailed:"Detallado", guest:"Invitado", guestInfo:"Inicia sesión para guardar tus chats" },
+  de: { dir:"ltr", lang:"de", newChat:"＋ Neuer Chat", chats:"Deine Chats", signIn:"Anmelden / Konto erstellen", signOut:"Abmelden", clear:"Chat löschen", prompt:"Nachricht an NEXORA AI...", disclaimer:"NEXORA AI kann Fehler machen. Prüfe wichtige Informationen.", eyebrow:"Ein intelligenter Raum für deine Ideen", welcome:"Willkommen bei", welcomeText:"Frage, lerne, erschaffe – legen wir los.", settings:"⚙️ Einstellungen", settingsTitle:"NEXORA-Einstellungen", display:"Anzeigename", language:"Oberflächensprache", appearance:"Darstellung", accent:"Akzentfarbe", length:"Antwortlänge", save:"Einstellungen speichern", cancel:"Abbrechen", search:"Chats durchsuchen...", folder:"＋ Neuer Ordner", memory:"🧠 Mein Speicher", suggestions:["💡 Thema erklären","⌨️ Code schreiben","📚 Beim Lernen helfen","🚀 Ideen vorschlagen"], concise:"Kurz", balanced:"Ausgewogen", detailed:"Ausführlich", guest:"Gast", guestInfo:"Melde dich an, um Chats zu speichern" },
+  zh: { dir:"ltr", lang:"zh", newChat:"＋ 新建聊天", chats:"聊天记录", signIn:"登录 / 创建账户", signOut:"退出登录", clear:"清除聊天", prompt:"发送消息给 NEXORA AI...", disclaimer:"NEXORA AI 可能会出错，请核实重要信息。", eyebrow:"承载创意的智能空间", welcome:"欢迎使用", welcomeText:"提问、学习、创作，现在开始吧。", settings:"⚙️ 设置", settingsTitle:"NEXORA 设置", display:"显示名称", language:"界面语言", appearance:"外观", accent:"主题颜色", length:"回答长度", save:"保存设置", cancel:"取消", search:"搜索聊天...", folder:"＋ 新建文件夹", memory:"🧠 我的记忆", suggestions:["💡 解释一个主题","⌨️ 编写代码","📚 帮助学习","🚀 提供创意"], concise:"简洁", balanced:"适中", detailed:"详细", guest:"访客", guestInfo:"登录以保存聊天记录" },
+  ja: { dir:"ltr", lang:"ja", newChat:"＋ 新しいチャット", chats:"チャット履歴", signIn:"ログイン / アカウント作成", signOut:"ログアウト", clear:"チャットを消去", prompt:"NEXORA AI にメッセージ...", disclaimer:"NEXORA AI は誤る場合があります。重要な情報を確認してください。", eyebrow:"アイデアのためのスマートスペース", welcome:"NEXORA AI へようこそ", welcomeText:"質問し、学び、創造しましょう。", settings:"⚙️ 設定", settingsTitle:"NEXORA 設定", display:"表示名", language:"表示言語", appearance:"外観", accent:"アクセントカラー", length:"回答の長さ", save:"設定を保存", cancel:"キャンセル", search:"チャットを検索...", folder:"＋ 新しいフォルダー", memory:"🧠 マイメモリー", suggestions:["💡 テーマを説明","⌨️ コードを書く","📚 学習を手伝う","🚀 アイデアを提案"], concise:"簡潔", balanced:"標準", detailed:"詳細", guest:"ゲスト", guestInfo:"ログインしてチャットを保存" },
+  ru: { dir:"ltr", lang:"ru", newChat:"＋ Новый чат", chats:"Ваши чаты", signIn:"Войти / Создать аккаунт", signOut:"Выйти", clear:"Очистить чат", prompt:"Сообщение для NEXORA AI...", disclaimer:"NEXORA AI может ошибаться; проверяйте важную информацию.", eyebrow:"Умное пространство для ваших идей", welcome:"Добро пожаловать в", welcomeText:"Спрашивайте, учитесь и создавайте.", settings:"⚙️ Настройки", settingsTitle:"Настройки NEXORA", display:"Отображаемое имя", language:"Язык интерфейса", appearance:"Оформление", accent:"Основной цвет", length:"Длина ответа", save:"Сохранить настройки", cancel:"Отмена", search:"Поиск по чатам...", folder:"＋ Новая папка", memory:"🧠 Моя память", suggestions:["💡 Объяснить тему","⌨️ Написать код","📚 Помочь с учёбой","🚀 Предложить идеи"], concise:"Кратко", balanced:"Сбалансированно", detailed:"Подробно", guest:"Гость", guestInfo:"Войдите, чтобы сохранять чаты" },
+  tr: { dir:"ltr", lang:"tr", newChat:"＋ Yeni sohbet", chats:"Sohbetlerin", signIn:"Giriş yap / Hesap oluştur", signOut:"Çıkış yap", clear:"Sohbeti temizle", prompt:"NEXORA AI'ya mesaj yaz...", disclaimer:"NEXORA AI hata yapabilir; önemli bilgileri kontrol edin.", eyebrow:"Fikirleriniz için akıllı alan", welcome:"NEXORA AI'ya hoş geldiniz", welcomeText:"Sorun, öğrenin, üretin ve başlayalım.", settings:"⚙️ Ayarlar", settingsTitle:"NEXORA Ayarları", display:"Görünen ad", language:"Arayüz dili", appearance:"Görünüm", accent:"Vurgu rengi", length:"Yanıt uzunluğu", save:"Ayarları kaydet", cancel:"İptal", search:"Sohbetlerde ara...", folder:"＋ Yeni klasör", memory:"🧠 Hafızam", suggestions:["💡 Bir konuyu açıkla","⌨️ Kod yaz","📚 Ders çalışmama yardım et","🚀 Fikir öner"], concise:"Kısa", balanced:"Dengeli", detailed:"Ayrıntılı", guest:"Misafir", guestInfo:"Sohbetleri kaydetmek için giriş yapın" },
+  hi: { dir:"ltr", lang:"hi", newChat:"＋ नई चैट", chats:"आपकी चैट", signIn:"साइन इन / खाता बनाएँ", signOut:"साइन आउट", clear:"चैट साफ़ करें", prompt:"NEXORA AI को संदेश लिखें...", disclaimer:"NEXORA AI से गलती हो सकती है; महत्वपूर्ण जानकारी जाँचें।", eyebrow:"आपके विचारों के लिए स्मार्ट स्पेस", welcome:"NEXORA AI में आपका स्वागत है", welcomeText:"पूछें, सीखें, बनाएँ और शुरू करें।", settings:"⚙️ सेटिंग्स", settingsTitle:"NEXORA सेटिंग्स", display:"प्रदर्शित नाम", language:"इंटरफ़ेस भाषा", appearance:"दिखावट", accent:"मुख्य रंग", length:"उत्तर की लंबाई", save:"सेटिंग्स सहेजें", cancel:"रद्द करें", search:"चैट खोजें...", folder:"＋ नया फ़ोल्डर", memory:"🧠 मेरी मेमोरी", suggestions:["💡 विषय समझाएँ","⌨️ कोड लिखें","📚 पढ़ाई में मदद करें","🚀 सुझाव दें"], concise:"संक्षिप्त", balanced:"संतुलित", detailed:"विस्तृत", guest:"अतिथि", guestInfo:"चैट सहेजने के लिए साइन इन करें" }
+};
+
 function applyPreferences() {
+  const locale = NEXORA_LOCALES[preferences.language] || NEXORA_LOCALES.ar;
   const root = document.documentElement;
   root.dataset.theme = preferences.theme === "dark" ? "dark" : "light";
   const color = validHexColor(preferences.color) ? preferences.color : defaultPreferences.color;
   root.style.setProperty("--purple", color);
   root.style.setProperty("--purple-dark", color);
   root.style.setProperty("--purple-light", color + "18");
-  const isEnglish = preferences.language === "en";
-  document.documentElement.lang = isEnglish ? "en" : "ar";
-  document.documentElement.dir = isEnglish ? "ltr" : "rtl";
+  root.lang = locale.lang;
+  root.dir = locale.dir;
 
-  const translations = isEnglish ? {
-    "#newChat": "＋ New chat", ".side-label": "Your chats",
-    "#authOpen": "Sign in / Create account", "#logoutBtn": "Sign out",
-    "#clearChat": "Clear chat", "#prompt": "Message NEXORA AI...",
-    ".disclaimer": "NEXORA AI can make mistakes; check important information.",
-    ".eyebrow": "A smart space for all your ideas",
-    ".welcome h1": "Welcome to NEXORA AI",
-    ".welcome p": "Ask, learn, create, and let's get started.",
-    "#settingsOpen": "⚙️ Settings", "#settingsTitle": "NEXORA Settings",
-    'label[for="settingsName"]': "Display name", 'label[for="settingsLanguage"]': "Interface language",
-    'label[for="settingsTheme"]': "Appearance", 'label[for="settingsColor"]': "Accent color",
-    'label[for="settingsResponseLength"]': "Response length",
-    "#settingsSave": "Save settings", "#settingsCancel": "Cancel",
-    "#settingsClose": "×"
-  } : {
-    "#newChat": "＋ محادثة جديدة", ".side-label": "محادثاتك",
-    "#authOpen": "تسجيل الدخول / إنشاء حساب", "#logoutBtn": "تسجيل الخروج",
-    "#clearChat": "مسح المحادثة", "#prompt": "اكتب رسالتك إلى NEXORA AI...",
-    ".disclaimer": "قد يخطئ NEXORA AI أحيانًا؛ راجع المعلومات المهمة.",
-    ".eyebrow": "مساحة ذكية لكل أفكارك",
-    ".welcome h1": "أهلاً بك في NEXORA AI",
-    ".welcome p": "اسأل، تعلّم، ابتكر، ودعنا نبدأ من هنا.",
-    "#settingsOpen": "⚙️ الإعدادات", "#settingsTitle": "إعدادات NEXORA",
-    'label[for="settingsName"]': "اسم العرض", 'label[for="settingsLanguage"]': "لغة الواجهة",
-    'label[for="settingsTheme"]': "المظهر", 'label[for="settingsColor"]': "اللون الأساسي",
-    'label[for="settingsResponseLength"]': "طول الردود",
-    "#settingsSave": "حفظ الإعدادات", "#settingsCancel": "إلغاء",
-    "#settingsClose": "×"
-  };
-  Object.entries(translations).forEach(([selector, value]) => {
-    const element = document.querySelector(selector);
-    if (!element) return;
-    if (selector === "#prompt") element.placeholder = value;
-    else if (selector === ".welcome h1") element.innerHTML = isEnglish ? 'Welcome to <span>NEXORA AI</span>' : 'أهلاً بك في <span>NEXORA AI</span>';
-    else element.textContent = value;
-  });
-  const chatSearch = document.getElementById("chatSearch");
-  if (chatSearch) chatSearch.placeholder = isEnglish ? "Search your conversations..." : "ابحث في محادثاتك...";
-  const createFolder = document.getElementById("createFolderBtn");
-  if (createFolder) createFolder.textContent = isEnglish ? "＋ New folder" : "＋ مجلد جديد";
-  const memoryButton = document.getElementById("openMemoryBtn");
-  if (memoryButton) memoryButton.textContent = isEnglish ? "🧠 My memory" : "🧠 ذاكرتي";
-  if (!document.getElementById("memoryModal")?.classList.contains("hidden")) renderNexoraMemory();
-  document.querySelectorAll(".suggestion").forEach((button, index) => {
-    const en = ["💡 Explain a topic", "⌨️ Write some code", "📚 Help me study", "🚀 Suggest ideas"];
-    const ar = ["💡 اشرح لي موضوعًا", "⌨️ اكتب لي كودًا", "📚 ساعدني في المذاكرة", "🚀 اقترح أفكارًا"];
-    button.textContent = (isEnglish ? en : ar)[index] || button.textContent;
-  });
-  const nameEl = document.getElementById("profileName");
-  if (currentUser && preferences.name) nameEl.textContent = preferences.name;
-  const responseLengthSelect = document.getElementById("settingsResponseLength");
-  if (responseLengthSelect) {
-    const labels = isEnglish ? { concise: "Concise", balanced: "Balanced", detailed: "Detailed" } : { concise: "مختصر", balanced: "متوازن", detailed: "تفصيلي" };
-    [...responseLengthSelect.options].forEach(option => { option.textContent = labels[option.value] || option.textContent; });
-  }
-  const saveButton = document.getElementById("settingsSave");
-  if (saveButton) saveButton.textContent = isEnglish ? "Save settings" : "حفظ الإعدادات";
-  const voiceButton = document.getElementById("micBtn");
-  if (voiceButton) {
-    const voiceLabel = isEnglish ? (isRecording ? "Stop recording" : "Voice input") : (isRecording ? "إيقاف التسجيل" : "تسجيل صوتي");
-    voiceButton.title = voiceLabel;
-    voiceButton.setAttribute("aria-label", voiceLabel);
-  }
+  const setText = (selector, value) => { const el=document.querySelector(selector); if(el) el.textContent=value; };
+  setText("#newChat",locale.newChat);
+  setText(".side-label",locale.chats);
+  setText("#authOpen",locale.signIn);
+  setText("#logoutBtn",locale.signOut);
+  setText("#clearChat",locale.clear);
+  setText(".disclaimer",locale.disclaimer);
+  setText(".eyebrow",locale.eyebrow);
+  setText(".welcome p",locale.welcomeText);
+  setText("#settingsOpen",locale.settings);
+  setText("#settingsTitle",locale.settingsTitle);
+  setText('label[for="settingsName"]',locale.display);
+  setText('label[for="settingsLanguage"]',locale.language);
+  setText('label[for="settingsTheme"]',locale.appearance);
+  setText('label[for="settingsColor"]',locale.accent);
+  setText('label[for="settingsResponseLength"]',locale.length);
+  setText("#settingsSave",locale.save);
+  setText("#settingsCancel",locale.cancel);
+  const heading=document.querySelector(".welcome h1");
+  if(heading) heading.innerHTML=locale.welcome+" <span>NEXORA AI</span>";
+  const prompt=document.getElementById("prompt");
+  if(prompt) prompt.placeholder=locale.prompt;
+  const search=document.getElementById("chatSearch");
+  if(search) search.placeholder=locale.search;
+  setText("#createFolderBtn",locale.folder);
+  setText("#openMemoryBtn",locale.memory);
+  document.querySelectorAll(".suggestion").forEach((button,index)=>{ if(locale.suggestions[index]) button.textContent=locale.suggestions[index]; });
+  const lengths={concise:locale.concise,balanced:locale.balanced,detailed:locale.detailed};
+  const lengthSelect=document.getElementById("settingsResponseLength");
+  if(lengthSelect) [...lengthSelect.options].forEach(o=>{o.textContent=lengths[o.value]||o.textContent;});
+  const profileName=document.getElementById("profileName");
+  const profileEmail=document.getElementById("profileEmail");
+  if(!currentUser){if(profileName)profileName.textContent=locale.guest;if(profileEmail)profileEmail.textContent=locale.guestInfo;}
+  else if(preferences.name&&profileName) profileName.textContent=preferences.name;
+  const voiceButton=document.getElementById("micBtn");
+  if(voiceButton){const label=preferences.language==="ar"?(isRecording?"إيقاف التسجيل":"تسجيل صوتي"):(isRecording?"Stop recording":"Voice input");voiceButton.title=label;voiceButton.setAttribute("aria-label",label);}
+  if(!document.getElementById("memoryModal")?.classList.contains("hidden")) renderNexoraMemory();
 }
 
 function loadLocalPreferences() {
@@ -174,7 +161,7 @@ async function loadPreferences() {
   } else {
     preferences = loadLocalPreferences();
   }
-  if (!["ar", "en"].includes(preferences.language)) preferences.language = "ar";
+  if (!Object.prototype.hasOwnProperty.call(NEXORA_LOCALES, preferences.language)) preferences.language = "ar";
   if (!["light", "dark"].includes(preferences.theme)) preferences.theme = "light";
   if (!validHexColor(preferences.color)) preferences.color = defaultPreferences.color;
   if (!["concise", "balanced", "detailed"].includes(preferences.responseLength)) preferences.responseLength = "balanced";
@@ -203,7 +190,7 @@ async function savePreferences(event) {
       if (error) throw error;
       const { data } = await supabaseClient.auth.getUser();
       if (data.user) currentUser = data.user;
-      message.textContent = preferences.language === "en" ? "Settings saved to your account." : "تم حفظ الإعدادات في حسابك بنجاح.";
+      message.textContent = preferences.language !== "ar" ? "Settings saved to your account." : "تم حفظ الإعدادات في حسابك بنجاح.";
     } else {
       localStorage.setItem("nexora-preferences", JSON.stringify(preferences));
       message.textContent = preferences.language === "en" ? "Settings saved on this device. Sign in to sync them across devices." : "تم حفظ الإعدادات على هذا الجهاز. سجّل الدخول لمزامنتها بين أجهزتك.";
@@ -266,7 +253,7 @@ async function saveChatOrganization(){
  chatOrganization=normalizeChatOrganization(chatOrganization);
  if(!currentUser){localStorage.setItem("nexora-chat-organization",JSON.stringify(chatOrganization));return;}
  const {data,error}=await supabaseClient.auth.updateUser({data:{...(currentUser.user_metadata||{}),nexora_chat_organization:chatOrganization}});
- if(error){console.error("Save chat organization error:",error);alert((preferences.language==="en"?"Could not save chat organization: ":"تعذّر حفظ تنظيم المحادثات: ")+error.message);return;}
+ if(error){console.error("Save chat organization error:",error);alert((preferences.language!=="ar"?"Could not save chat organization: ":"تعذّر حفظ تنظيم المحادثات: ")+error.message);return;}
  if(data?.user)currentUser=data.user;
 }
 function chatTextMatches(chat,query){
@@ -524,7 +511,7 @@ async function deleteConversation(chatId) {
   const chat = conversations.find(item => item.id === chatId);
   if (!chat) return;
 
-  const isEnglish = preferences.language === "en";
+  const isEnglish = preferences.language !== "ar";
   const confirmed = confirm(isEnglish
     ? "Permanently delete this conversation?"
     : "هل تريد حذف هذه المحادثة نهائيًا؟");
@@ -824,7 +811,7 @@ function makeSpeakButton(message) {
 function makeFeedbackControls(message) {
   const wrap = document.createElement("div");
   wrap.className = "assistant-feedback";
-  const isEnglish = preferences.language === "en";
+  const isEnglish = preferences.language !== "ar";
   const feedbackChatId = activeChatId;
 
   if (message.feedbackSubmitted) {
