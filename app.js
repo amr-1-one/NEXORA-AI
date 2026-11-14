@@ -1395,7 +1395,7 @@ async function sendMessage(text) {
         messages: messages.slice(-12).map((message, index, recentMessages) => ({
           role: message.role === "assistant" ? "model" : "user",
           text: message.text + (index === recentMessages.length - 1 && message.role !== "assistant"
-            ? "\n\n" + getResponseLengthInstruction() + memoryContext
+            ? "\n\n" + getResponseLengthInstruction() + memoryContext + "\n\nLANGUAGE RULE (highest priority): Identify the language used in the user’s latest actual message, ignoring this instruction, saved memory, previous messages, and the interface language. Reply entirely in that same language. If the latest message is English, answer in English; if Arabic, answer in Arabic. For any other language, use that language. Do not switch languages unless the user asks you to."
             : "")
         })),
         images: imageAttachments
