@@ -1,4 +1,4 @@
-const CACHE_NAME = "nexora-shell-v19";
+const CACHE_NAME = "nexora-shell-v20";
 const APP_ROOT = new URL("./", self.registration.scope);
 const APP_FILES = [
   "./",
@@ -19,7 +19,13 @@ const APP_FILES = [
   "./manifest-style-5.json",
   "./icons/nexora-style-5.svg",
   "./manifest-style-6.json",
-  "./icons/nexora-style-6.svg"
+  "./icons/nexora-style-6.svg",
+  "./icons/nexora-icon-1.png",
+  "./icons/nexora-icon-2.png",
+  "./icons/nexora-icon-3.png",
+  "./icons/nexora-icon-4.png",
+  "./icons/nexora-icon-5.png",
+  "./icons/nexora-icon-6.png"
 ].map((path) => new URL(path, APP_ROOT).href);
 
 self.addEventListener("install", (event) => {
