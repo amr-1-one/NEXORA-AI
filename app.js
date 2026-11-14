@@ -229,8 +229,9 @@ function updateProfile() {
     authOpen.classList.add("hidden");
     logoutBtn.classList.remove("hidden");
   } else {
-    nameEl.textContent = "زائر";
-    emailEl.textContent = "سجّل الدخول لحفظ محادثاتك";
+    const locale = NEXORA_LOCALES[preferences.language] || NEXORA_LOCALES.ar;
+    nameEl.textContent = locale.guest;
+    emailEl.textContent = locale.guestInfo;
     avatarEl.textContent = "N";
     authOpen.classList.remove("hidden");
     logoutBtn.classList.add("hidden");
