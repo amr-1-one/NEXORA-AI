@@ -1930,8 +1930,8 @@ initializeApp();
 
 // NEXORA icon picker: choose an icon before installing the PWA.
 (() => {
-  const names = ["Orbit", "Prism", "Halo", "Hex", "Rise", "Noir"];
-  const iconPath = (n) => `./icons/nexora-style-${n}.svg`;
+  const names = ["الأيقونة 1", "الأيقونة 2", "الأيقونة 3", "الأيقونة 4", "الأيقونة 5", "الأيقونة 6"];
+  const iconPath = (n) => `./icons/nexora-icon-${n}.png`;
   const manifestPath = (n) => `./manifest-style-${n}.json`;
   const manifestLink = document.getElementById("appManifest");
   const chooserButton = document.getElementById("chooseAppIconBtn");
