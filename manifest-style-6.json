@@ -17,6 +17,12 @@
   "theme_color": "#050509",
   "icons": [
     {
+      "src": "./icons/nexora-style-6.svg",
+      "sizes": "any 192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
       "src": "./icons/nexora-icon-6.png",
       "sizes": "256x256",
       "type": "image/png",
